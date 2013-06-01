@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>exp3 - basic_cube</title>
+    <title>exp3 - basic_shader</title>
     <meta charset="utf-8">
 </head>
 <body>
@@ -17,11 +17,12 @@ function on_init( )
     this.defaults.camera.position.z = 400;
 
     var geometry = new THREE.CubeGeometry( 200, 200, 200 );
-
-    var texture = THREE.ImageUtils.loadTexture( 'assets/brick.png' );
-    texture.anisotropy = this.renderer.getMaxAnisotropy();
-
-    var material = new THREE.MeshBasicMaterial( { map: texture } );
+    
+    var material = new THREE.ShaderMaterial( {
+        uniforms : { fixedColor: { type: "v4", value: new THREE.Vector4( 0.5, 0.75, 1.0, 1.0 ) } },
+        vertexShader : this.loadText( "./assets/unlit.vs" ),
+        fragmentShader : this.loadText( "./assets/unlit.fixedcolor.fs" ),
+        } );
 
     mesh = new THREE.Mesh( geometry, material );
     this.defaults.scene.add( mesh );

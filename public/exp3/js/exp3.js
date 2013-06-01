@@ -48,3 +48,37 @@ function Exp3( ctx )
     animate();
 }
 
+Exp3.prototype._shaderId = 0;
+
+Exp3.prototype.loadText = function( url )
+{
+    var request = new XMLHttpRequest();
+    
+    request.open( "GET", url, false );
+    
+    request.send( null ); 
+    
+    if ( request.status == 200 )
+    {   // If we got HTTP status 200 (OK)
+        //console.log( request.responseText );
+        return request.responseText;
+    }
+    else
+    {   // Failed
+        console.log( "Exp3.loadText( " + url + " ) failed" );
+        return "";
+    }
+}
+
+Exp3.prototype.loadShaderMaterial = function( params )
+{
+    var vsScript = this.loadText( params.vertexShader );
+    var fsScript = this.loadText( params.fragmentShader );
+    
+    return new THREE.ShaderMaterial( {
+        uniforms: params.uniforms,
+        vertexShader: vsScript,
+        fragmentShader: fsScript,
+    } );
+}
+
