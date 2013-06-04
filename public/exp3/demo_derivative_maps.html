@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>exp3 - demo_derivative_maps</title>
+    <meta charset="utf-8">
+</head>
+<body>
+
+    <script src="../threejs/build/three.min.js"></script>
+    <script src="./js/exp3.js"></script>
+    <script>
+
+var mesh;
+
+function on_init( )
+{
+    this.defaults.camera.position.z = 400;
+
+    var geometry = new THREE.CubeGeometry( 200, 200, 200 );
+    
+    var texture = THREE.ImageUtils.loadTexture( 'assets/brick.png' );
+    texture.anisotropy = this.renderer.getMaxAnisotropy();
+    
+    var material = new THREE.ShaderMaterial( {
+        uniforms : { 
+            baseMap: { type: "t", value: texture } 
+        },
+        vertexShader   : this.loadText( "./assets/derivativemaps.vs" ),
+        fragmentShader : this.loadText( "./assets/derivativemaps.fs" ),
+        } );
+
+    mesh = new THREE.Mesh( geometry, material );
+    this.defaults.scene.add( mesh );
+}
+
+function on_resize( width, height )
+{
+    this.defaults.camera.aspect = width / height;
+    this.defaults.camera.updateProjectionMatrix();
+}
+
+function on_render( )
+{
+    mesh.rotation.x += 0.005;
+    mesh.rotation.y += 0.01;
+
+    this.renderer.render( this.defaults.scene, this.defaults.camera );
+}
+
+new Exp3( {
+    bgcolor : "#202020",
+    on_init : on_init, 
+    on_resize : on_resize, 
+    on_render : on_render 
+    } );
+
+    </script>
+
+</body>
+</html>
