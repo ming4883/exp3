@@ -35,8 +35,8 @@ function on_resize( width, height )
 
 function on_render( )
 {
-    mesh.rotation.x += 0.005;
-    mesh.rotation.y += 0.01;
+    mesh.rotation.x += 0.0025;
+    mesh.rotation.y += 0.005;
 
     this.renderer.render( this.defaults.scene, this.defaults.camera );
 }

@@ -14,16 +14,17 @@ var mesh;
 
 function on_init( )
 {
+    this.renderer.context.getExtension( "OES_standard_derivatives" );
     this.defaults.camera.position.z = 400;
 
     var geometry = new THREE.CubeGeometry( 200, 200, 200 );
     
-    var texture = THREE.ImageUtils.loadTexture( 'assets/brick.png' );
+    var texture = THREE.ImageUtils.loadTexture( "assets/wall002_height.png" );
     texture.anisotropy = this.renderer.getMaxAnisotropy();
     
     var material = new THREE.ShaderMaterial( {
         uniforms : { 
-            baseMap: { type: "t", value: texture } 
+            heightMap: { type: "t", value: texture } 
         },
         vertexShader   : this.loadText( "./assets/derivativemaps.vs" ),
         fragmentShader : this.loadText( "./assets/derivativemaps.fs" ),
@@ -41,8 +42,8 @@ function on_resize( width, height )
 
 function on_render( )
 {
-    mesh.rotation.x += 0.005;
-    mesh.rotation.y += 0.01;
+    mesh.rotation.x += 0.0025;
+    mesh.rotation.y += 0.005;
 
     this.renderer.render( this.defaults.scene, this.defaults.camera );
 }
