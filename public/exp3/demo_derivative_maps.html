@@ -11,34 +11,60 @@
     <script src="./js/dat.gui.min.js"></script>
     <script>
 
-function Config()
-{
-    this.bumpness = 8.0;
-    
-    var gui = new dat.GUI();
-    gui.add( this, 'bumpness', 1.0, 16.0 ).step( 0.25 );
-}
-
 var mesh;
 var material;
 var config;
+var textures;
+
+function Config()
+{
+    this.bumpness = 4.0;
+    this.rotate = 0.5;
+    this.zoom = 1.0;
+    this.texture = 0.0;
+    
+    var gui = new dat.GUI();
+    
+    var f;
+    f = gui.addFolder( "Material" );
+    f.add( this, "bumpness", 1.0, 16.0 ).step( 0.5 )
+    .onChange( function( val ) { material.uniforms.bumpness.value = val; } );
+    f.add( this, "texture", { pyramids: 0, wall002: 1,  } )
+    .onFinishChange( function( val ) { material.uniforms.heightMap.value = textures[val]; } );
+    f.open();
+        
+    f = gui.addFolder( "Scene" )
+    f.add( this, "rotate", 0.0, 2.0 ).step( 0.1 );
+    f.add( this, "zoom", 1.0, 4.0 ).step( 0.1 );
+    f.open();
+}
 
 function on_init( )
 {
     config = new Config();
     
     this.renderer.context.getExtension( "OES_standard_derivatives" );
-    this.defaults.camera.position.z = 400;
 
-    var geometry = new THREE.CubeGeometry( 200, 200, 200 );
+    var geometry = new THREE.CubeGeometry( 100, 100, 100 );
+    //var geometry = new THREE.CylinderGeometry( 100, 100, 200, 16 );
     
-    var texture = THREE.ImageUtils.loadTexture( "assets/wall002_height.png" );
-    texture.anisotropy = this.renderer.getMaxAnisotropy();
-    texture.minFilter = texture.magFilter = THREE.LinearFilter;
+    textures = [];
+    
+    var tex;
+    tex = THREE.ImageUtils.loadTexture( "assets/pyramids_grad.png" );
+    tex.anisotropy = this.renderer.getMaxAnisotropy();
+    tex.minFilter = tex.magFilter = THREE.LinearFilter;
+    textures.push( tex );
+    
+    tex = THREE.ImageUtils.loadTexture( "assets/wall002_grad.png" );
+    tex.anisotropy = this.renderer.getMaxAnisotropy();
+    tex.minFilter = tex.magFilter = THREE.LinearFilter;
+    textures.push( tex );
+    
     
     material = new THREE.ShaderMaterial( {
         uniforms : { 
-            heightMap: { type: "t", value: texture },
+            heightMap: { type: "t", value: textures[0] },
             bumpness : { type: "f", value: config.bumpness },
         },
         vertexShader   : this.loadText( "./assets/derivativemaps.vs" ),
@@ -57,10 +83,14 @@ function on_resize( width, height )
 
 function on_render( )
 {
-    material.uniforms.bumpness.value = config.bumpness;
     
-    mesh.rotation.x += 0.0025;
-    mesh.rotation.y += 0.005;
+    if ( config.rotate > 0 )
+    {
+        mesh.rotation.x += 0.0025 * config.rotate;
+        mesh.rotation.y += 0.005 * config.rotate;
+    }
+    
+    this.defaults.camera.position.z = 400 / config.zoom;
 
     this.renderer.render( this.defaults.scene, this.defaults.camera );
 }
