@@ -6,6 +6,7 @@ varying vec2 v_txc;
 varying vec3 v_nrm;
 varying vec3 v_pos;
 uniform sampler2D heightMap;
+uniform float bumpness;
 
 vec3 CalculateSurfaceGradient( vec3 n, vec3 dpdx, vec3 dpdy, float dhdx, float dhdy )
 {
@@ -22,7 +23,7 @@ vec3 PerturbNormal( vec3 n, vec3 dpdx, vec3 dpdy, float dhdx, float dhdy )
 
 void main()
 {
-    float bumpHeight = texture2D( heightMap, v_txc ).r;
+    float bumpHeight = texture2D( heightMap, v_txc ).r * bumpness;
     
     vec3 wsNormal = normalize( v_nrm );
     

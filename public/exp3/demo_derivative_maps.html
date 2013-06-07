@@ -8,12 +8,25 @@
 
     <script src="../threejs/build/three.min.js"></script>
     <script src="./js/exp3.js"></script>
+    <script src="./js/dat.gui.min.js"></script>
     <script>
 
+function Config()
+{
+    this.bumpness = 8.0;
+    
+    var gui = new dat.GUI();
+    gui.add( this, 'bumpness', 1.0, 16.0 ).step( 0.25 );
+}
+
 var mesh;
+var material;
+var config;
 
 function on_init( )
 {
+    config = new Config();
+    
     this.renderer.context.getExtension( "OES_standard_derivatives" );
     this.defaults.camera.position.z = 400;
 
@@ -21,10 +34,12 @@ function on_init( )
     
     var texture = THREE.ImageUtils.loadTexture( "assets/wall002_height.png" );
     texture.anisotropy = this.renderer.getMaxAnisotropy();
+    texture.minFilter = texture.magFilter = THREE.LinearFilter;
     
-    var material = new THREE.ShaderMaterial( {
+    material = new THREE.ShaderMaterial( {
         uniforms : { 
-            heightMap: { type: "t", value: texture } 
+            heightMap: { type: "t", value: texture },
+            bumpness : { type: "f", value: config.bumpness },
         },
         vertexShader   : this.loadText( "./assets/derivativemaps.vs" ),
         fragmentShader : this.loadText( "./assets/derivativemaps.fs" ),
@@ -42,6 +57,8 @@ function on_resize( width, height )
 
 function on_render( )
 {
+    material.uniforms.bumpness.value = config.bumpness;
+    
     mesh.rotation.x += 0.0025;
     mesh.rotation.y += 0.005;
 
