@@ -11,31 +11,39 @@
     <script src="./js/dat.gui.min.js"></script>
     <script>
 
-var mesh;
+var meshes = [];
 var material;
 var config;
-var textures;
+var textures = [];
 
 function Config()
 {
-    this.bumpness = 4.0;
+    this.bumpness = 8.0;
     this.rotate = 0.5;
     this.zoom = 1.0;
-    this.texture = 0.0;
+    this.texture = 0;
+    this.mesh = 0;
     
     var gui = new dat.GUI();
     
     var f;
     f = gui.addFolder( "Material" );
     f.add( this, "bumpness", 1.0, 16.0 ).step( 0.5 )
-    .onChange( function( val ) { material.uniforms.bumpness.value = val; } );
+        .onChange( function( val ) { material.uniforms.bumpness.value = val; } );
     f.add( this, "texture", { pyramids: 0, wall002: 1,  } )
-    .onFinishChange( function( val ) { material.uniforms.heightMap.value = textures[val]; } );
+        .onFinishChange( function( val ) { material.uniforms.heightMap.value = textures[val]; } );
+    
     f.open();
         
     f = gui.addFolder( "Scene" )
     f.add( this, "rotate", 0.0, 2.0 ).step( 0.1 );
-    f.add( this, "zoom", 1.0, 4.0 ).step( 0.1 );
+    f.add( this, "zoom", 0.5, 2.0 ).step( 0.1 );
+    f.add( this, "mesh", { cube: 0, cone: 1, sphere: 2,  } )
+        .onFinishChange( function( val ) { 
+            for ( var i = 0; i < meshes.length; ++i )
+                meshes[i].visible = ( i == val );
+        } );
+    
     f.open();
 }
 
@@ -44,35 +52,41 @@ function on_init( )
     config = new Config();
     
     this.renderer.context.getExtension( "OES_standard_derivatives" );
-
-    var geometry = new THREE.CubeGeometry( 100, 100, 100 );
-    //var geometry = new THREE.CylinderGeometry( 100, 100, 200, 16 );
     
-    textures = [];
+    var texpaths = [ "assets/pyramids_grad.png", "assets/wall002_grad.png" ];
     
-    var tex;
-    tex = THREE.ImageUtils.loadTexture( "assets/pyramids_grad.png" );
-    tex.anisotropy = this.renderer.getMaxAnisotropy();
-    tex.minFilter = tex.magFilter = THREE.LinearFilter;
-    textures.push( tex );
-    
-    tex = THREE.ImageUtils.loadTexture( "assets/wall002_grad.png" );
-    tex.anisotropy = this.renderer.getMaxAnisotropy();
-    tex.minFilter = tex.magFilter = THREE.LinearFilter;
-    textures.push( tex );
-    
+    for ( var i = 0; i < texpaths.length; ++i )
+    {
+        var tex = THREE.ImageUtils.loadTexture( texpaths[i] );
+        tex.anisotropy = this.renderer.getMaxAnisotropy();
+        tex.minFilter = tex.magFilter = THREE.LinearFilter;
+        textures.push( tex );
+    }
     
     material = new THREE.ShaderMaterial( {
         uniforms : { 
             heightMap: { type: "t", value: textures[0] },
             bumpness : { type: "f", value: config.bumpness },
+            camPos : { type: "v3", value: this.defaults.camera.position },
         },
         vertexShader   : this.loadText( "./assets/derivativemaps.vs" ),
         fragmentShader : this.loadText( "./assets/derivativemaps.fs" ),
         } );
 
-    mesh = new THREE.Mesh( geometry, material );
-    this.defaults.scene.add( mesh );
+    var geoms = [
+        new THREE.CubeGeometry( 100, 100, 100 ),
+        new THREE.CylinderGeometry( 10, 50, 100, 32 ),
+        new THREE.SphereGeometry( 50, 32, 32 ),
+        ];
+    
+    for ( var i = 0; i < geoms.length; ++i )
+    {
+        var mesh = new THREE.Mesh( geoms[i], material );
+        this.defaults.scene.add( mesh );
+        mesh.visible = false;
+        meshes.push( mesh );
+    }
+    meshes[0].visible = true;
 }
 
 function on_resize( width, height )
@@ -83,14 +97,18 @@ function on_resize( width, height )
 
 function on_render( )
 {
-    
     if ( config.rotate > 0 )
     {
-        mesh.rotation.x += 0.0025 * config.rotate;
-        mesh.rotation.y += 0.005 * config.rotate;
+        for ( var i = 0; i < meshes.length; ++i )
+        {
+            meshes[i].rotation.x += 0.0025 * config.rotate;
+            meshes[i].rotation.y += 0.005 * config.rotate;
+        }
     }
     
-    this.defaults.camera.position.z = 400 / config.zoom;
+    this.defaults.camera.position.z = 200 / config.zoom;
+    
+    material.uniforms.camPos.value =  this.defaults.camera.position;
 
     this.renderer.render( this.defaults.scene, this.defaults.camera );
 }

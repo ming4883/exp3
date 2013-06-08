@@ -7,6 +7,7 @@ varying vec3 v_nrm;
 varying vec3 v_pos;
 uniform sampler2D heightMap;
 uniform float bumpness;
+uniform vec3 camPos;
 
 vec3 CalculateSurfaceGradient( vec3 n, vec3 dpdx, vec3 dpdy, float dhdx, float dhdy )
 {
@@ -24,6 +25,20 @@ vec3 PerturbNormal( vec3 n, vec3 dpdx, vec3 dpdy, float dhdx, float dhdy )
 float ApplyChainRule( float dhdu, float dhdv, float dud_, float dvd_ )
 {
     return dhdu * dud_ + dhdv * dvd_;
+}
+
+vec3 Lighting( vec3 lightDir, vec3 lightColor, vec3 wsNormal, vec3 wsViewDir )
+{
+    vec3 halfDir = normalize( lightDir + wsViewDir );
+
+    float ndotl = dot( wsNormal, lightDir );
+    ndotl = clamp( ndotl, 0.0, 1.0 );
+    
+    float ndoth = dot( wsNormal, halfDir );
+    ndoth = clamp( ndoth, 0.0, 1.0 );
+    ndoth = pow( ndoth, 32.0 );
+    
+    return lightColor * ( ndotl + ndoth );
 }
 
 void main()
@@ -52,18 +67,12 @@ void main()
 #endif
     
     vec3 wsNormal = PerturbNormal( normalize( v_nrm ), dpdx, dpdy, dhdx, dhdy );
+    vec3 wsViewDir = normalize( camPos - v_pos );
     
-    float ndotl;
-
     vec3 diff = vec3( 0.0 );
     
-    ndotl = dot( wsNormal, normalize( vec3( 1.0, 1.0, 1.0 ) ) );
-    ndotl = clamp( ndotl, 0.0, 1.0 );
-    diff += vec3( 0.0, 0.351, 1.0 ) * ndotl;
-    
-    ndotl = dot( wsNormal, normalize( vec3(-1.0,-1.0,-1.0 ) ) );
-    ndotl = clamp( ndotl, 0.0, 1.0 );
-    diff += vec3( 1.0, 0.702, 0.0 ) * ndotl;
+    diff += Lighting( normalize( vec3( 1.0, 1.0, 1.0 ) ), vec3( 1.0, 0.702, 0.351 ) * 0.75, wsNormal, wsViewDir );
+    diff += Lighting( normalize( vec3(-1.0,-1.0, 1.0 ) ), vec3( 0.702, 0.702, 1.0 ) * 0.75, wsNormal, wsViewDir );
     
     gl_FragColor = vec4( diff, 1.0 );
 }
