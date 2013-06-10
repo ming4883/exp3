@@ -9,18 +9,20 @@
     <script src="../threejs/build/three.min.js"></script>
     <script src="./js/exp3.js"></script>
     <script src="./js/dat.gui.min.js"></script>
+    <script src="./js/TrackballControls.js"></script>
     <script>
 
 var meshes = [];
 var material;
 var config;
 var textures = [];
+var controls;
 
 function Config()
 {
     this.bumpness = 8.0;
     this.rotate = 0.5;
-    this.zoom = 1.0;
+    //this.zoom = 1.0;
     this.texture = 0;
     this.mesh = 0;
     
@@ -37,7 +39,7 @@ function Config()
         
     f = gui.addFolder( "Scene" )
     f.add( this, "rotate", 0.0, 2.0 ).step( 0.1 );
-    f.add( this, "zoom", 0.5, 2.0 ).step( 0.1 );
+    //f.add( this, "zoom", 0.5, 2.0 ).step( 0.1 );
     f.add( this, "mesh", { cube: 0, cone: 1, sphere: 2,  } )
         .onFinishChange( function( val ) { 
             for ( var i = 0; i < meshes.length; ++i )
@@ -52,6 +54,11 @@ function on_init( )
     config = new Config();
     
     this.renderer.context.getExtension( "OES_standard_derivatives" );
+    
+    controls = new THREE.TrackballControls( this.defaults.camera );
+    controls.dynamicDampingFactor = 0.25;
+    
+    this.defaults.camera.position.set( 0.0, 0.0, 200.0 );
     
     var texpaths = [ "assets/pyramids_grad.png", "assets/wall002_grad.png" ];
     
@@ -106,7 +113,9 @@ function on_render( )
         }
     }
     
-    this.defaults.camera.position.z = 200 / config.zoom;
+    controls.update();
+    
+    //this.defaults.camera.position.z = 200 / config.zoom;
     
     material.uniforms.camPos.value =  this.defaults.camera.position;
 

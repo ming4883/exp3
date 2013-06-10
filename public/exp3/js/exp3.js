@@ -14,6 +14,11 @@ function Exp3( ctx )
         thiz.renderer = new THREE.WebGLRenderer();
         thiz.renderer.setSize( window.innerWidth, window.innerHeight );
         document.body.appendChild( thiz.renderer.domElement );
+        
+        // Clock
+        thiz.clock = new THREE.Clock();
+        // thiz.clock.getDelta();
+        // thiz.clock.getElapsedTime();
 
         // defaults
         thiz.defaults = {};
