@@ -9,37 +9,24 @@
     <script src="../threejs/build/three.min.js"></script>
     <script src="./js/exp3.js"></script>
     <script src="./js/dat.gui.min.js"></script>
-    <script src="./js/TrackballControls.js"></script>
     <script>
 
 var meshes = [];
 var material;
 var config;
 var textures = [];
-var controls;
 
 function Config()
 {
     this.bumpness = 8.0;
-    this.rotate = 0.5;
-    //this.zoom = 1.0;
     this.texture = 0;
     this.mesh = 0;
     
     var gui = new dat.GUI();
     
     var f;
-    f = gui.addFolder( "Material" );
-    f.add( this, "bumpness", 1.0, 16.0 ).step( 0.5 )
-        .onChange( function( val ) { material.uniforms.bumpness.value = val; } );
-    f.add( this, "texture", { pyramids: 0, wall002: 1,  } )
-        .onFinishChange( function( val ) { material.uniforms.heightMap.value = textures[val]; } );
-    
-    f.open();
-        
+            
     f = gui.addFolder( "Scene" )
-    f.add( this, "rotate", 0.0, 2.0 ).step( 0.1 );
-    //f.add( this, "zoom", 0.5, 2.0 ).step( 0.1 );
     f.add( this, "mesh", { cube: 0, cone: 1, sphere: 2,  } )
         .onFinishChange( function( val ) { 
             for ( var i = 0; i < meshes.length; ++i )
@@ -47,6 +34,15 @@ function Config()
         } );
     
     f.open();
+    
+    f = gui.addFolder( "Material" );
+    f.add( this, "bumpness", 1.0, 16.0 ).step( 0.5 )
+        .onChange( function( val ) { material.uniforms.bumpness.value = val; } );
+    f.add( this, "texture", { pyramids: 0, wall002: 1,  } )
+        .onFinishChange( function( val ) { material.uniforms.heightMap.value = textures[val]; } );
+    
+    f.open();
+
 }
 
 function on_init( )
@@ -55,8 +51,8 @@ function on_init( )
     
     this.renderer.context.getExtension( "OES_standard_derivatives" );
     
-    controls = new THREE.TrackballControls( this.defaults.camera );
-    controls.dynamicDampingFactor = 0.25;
+    //controls = new THREE.TrackballControls( this.defaults.camera );
+    //controls.dynamicDampingFactor = 0.25;
     
     this.defaults.camera.position.set( 0.0, 0.0, 200.0 );
     
@@ -104,29 +100,62 @@ function on_resize( width, height )
 
 function on_render( )
 {
-    if ( config.rotate > 0 )
-    {
-        for ( var i = 0; i < meshes.length; ++i )
-        {
-            meshes[i].rotation.x += 0.0025 * config.rotate;
-            meshes[i].rotation.y += 0.005 * config.rotate;
-        }
-    }
-    
-    controls.update();
-    
-    //this.defaults.camera.position.z = 200 / config.zoom;
-    
     material.uniforms.camPos.value =  this.defaults.camera.position;
 
     this.renderer.render( this.defaults.scene, this.defaults.camera );
+}
+
+var mouseState = {
+    down : false,
+    downX : 0,
+    downY : 0,
+    deltaX : 0,
+    deltaY : 0,
+    rotX : 0,
+    rotY : 0,
+    onmove : function( event )
+    {
+        this.deltaX = event.clientX - this.downX;
+        this.deltaY = event.clientY - this.downY;
+    }
+};
+
+function on_mousedown( event )
+{
+    mouseState.down = true;
+    mouseState.downX = event.clientX;
+    mouseState.downY = event.clientY;
+    mouseState.rotX = meshes[0].rotation.x;
+    mouseState.rotY = meshes[0].rotation.y;
+}
+
+function on_mouseup( event )
+{
+    mouseState.down = false;
+}
+
+function on_mousemove( event )
+{
+    if ( mouseState.down )
+    {
+        mouseState.onmove( event );
+        
+        for ( var i = 0; i < meshes.length; ++i )
+        {
+            meshes[i].rotation.x = mouseState.rotX + 0.01 * mouseState.deltaY;
+            meshes[i].rotation.y = mouseState.rotY + 0.01 * mouseState.deltaX;
+        }
+    }
 }
 
 new Exp3( {
     bgcolor : "#202020",
     on_init : on_init, 
     on_resize : on_resize, 
-    on_render : on_render 
+    on_render : on_render,
+    on_mousedown : on_mousedown,
+    on_mouseup : on_mouseup,
+    on_mousemove : on_mousemove,
     } );
 
     </script>

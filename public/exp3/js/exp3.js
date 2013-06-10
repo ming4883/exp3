@@ -9,7 +9,16 @@ function Exp3( ctx )
         document.body.style["margin"] = "0px";
         document.body.style["background-color"] = thiz.context.bgcolor ? thiz.context.bgcolor : "#000000";
         document.body.style["overflow"] = "hidden";
-
+        
+        document.body.style["-webkit-touch-callout"] = "none";
+        document.body.style["-webkit-user-select"] = "none";
+        document.body.style["-khtml-user-select"] = "none";
+        document.body.style["-moz-user-select"] = "none";
+        document.body.style["-ms-user-select"] = "none";
+        document.body.style["user-select"] = "none";
+        
+        //document.body.onselectstart = function() { return false; }
+        
         // WebGLRenderer
         thiz.renderer = new THREE.WebGLRenderer();
         thiz.renderer.setSize( window.innerWidth, window.innerHeight );
@@ -31,6 +40,15 @@ function Exp3( ctx )
         
         if ( thiz.context.on_init )
             thiz.context.on_init.call( thiz );
+            
+        if ( thiz.context.on_mousedown )
+            thiz.renderer.domElement.onmousedown = thiz.context.on_mousedown;
+            
+        if ( thiz.context.on_mouseup )
+            thiz.renderer.domElement.onmouseup = thiz.context.on_mouseup;
+            
+        if ( thiz.context.on_mousemove )
+            thiz.renderer.domElement.onmousemove = thiz.context.on_mousemove;
     }
 
     function onWindowResize()
