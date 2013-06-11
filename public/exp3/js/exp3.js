@@ -8,7 +8,30 @@ function Exp3( ctx )
         // basic css setup
         document.body.style["margin"] = "0px";
         document.body.style["background-color"] = thiz.context.bgcolor ? thiz.context.bgcolor : "#000000";
+        document.body.style["color"] = thiz.context.fgcolor ? thiz.context.fgcolor : "#ffffff";
         document.body.style["overflow"] = "hidden";
+        
+        var elems;
+        // exp3.info
+        elems = document.getElementsByClassName( "exp3.info" );
+        for ( var i = 0; i < elems.length; ++i )
+        {
+            var elem = elems[i];
+            elem.style["padding"] = "5px";
+            elem.style["font-family"] = "Monospace";
+            elem.style["font-size"] = "12px";
+            elem.style["position"] = "absolute";
+            elem.style["text-shadow"] = "2px 2px 2px #404040";
+            elem.style["z-index"] = "1000";
+        }
+        
+        // exp3.link
+        elems = document.getElementsByClassName( "exp3.link" );
+        for ( var i = 0; i < elems.length; ++i )
+        {
+            var elem = elems[i];
+            elem.style["color"] = "orange";
+        }
         
         document.body.style["-webkit-touch-callout"] = "none";
         document.body.style["-webkit-user-select"] = "none";
@@ -40,12 +63,26 @@ function Exp3( ctx )
         
         if ( thiz.context.on_init )
             thiz.context.on_init.call( thiz );
-            
+        
+        // disable right-click context menu
+        thiz.renderer.domElement.addEventListener( "contextmenu", function( evt )
+        { 
+            if ( evt.button === 2 )
+            {
+                evt.preventDefault();
+                return false;
+            }
+        }, false );
+        
+        // mouse events
         if ( thiz.context.on_mousedown )
         {
             thiz.renderer.domElement.onmousedown = function( evt )
             {
                 thiz.context.on_mousedown.call( thiz, evt );
+                
+                evt.preventDefault();
+                evt.stopPropagation();
             }
         }
         
@@ -54,6 +91,9 @@ function Exp3( ctx )
             thiz.renderer.domElement.onmouseup = function( evt )
             {
                 thiz.context.on_mouseup.call( thiz, evt );
+                
+                evt.preventDefault();
+                evt.stopPropagation();
             }
         }
         
@@ -62,6 +102,9 @@ function Exp3( ctx )
             thiz.renderer.domElement.onmousemove = function( evt )
             {
                 thiz.context.on_mousemove.call( thiz, evt );
+                
+                evt.preventDefault();
+                evt.stopPropagation();
             }
         }
     }

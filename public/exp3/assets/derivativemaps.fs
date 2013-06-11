@@ -57,7 +57,7 @@ void main()
     vec2 bumpGrad = ( texture2D( heightMap, v_txc ).rg * 2.0 - 1.0 );
     
     vec2 uv = v_txc;
-    uv.y *= -1.0;
+    //uv.xy *= -1.0;
     vec2 duvdx = dFdx( uv ) * bumpness * 64.0;
     vec2 duvdy = dFdy( uv ) * bumpness * 64.0;
     
