@@ -42,13 +42,28 @@ function Exp3( ctx )
             thiz.context.on_init.call( thiz );
             
         if ( thiz.context.on_mousedown )
-            thiz.renderer.domElement.onmousedown = thiz.context.on_mousedown;
-            
+        {
+            thiz.renderer.domElement.onmousedown = function( evt )
+            {
+                thiz.context.on_mousedown.call( thiz, evt );
+            }
+        }
+        
         if ( thiz.context.on_mouseup )
-            thiz.renderer.domElement.onmouseup = thiz.context.on_mouseup;
-            
+        {
+            thiz.renderer.domElement.onmouseup = function( evt )
+            {
+                thiz.context.on_mouseup.call( thiz, evt );
+            }
+        }
+        
         if ( thiz.context.on_mousemove )
-            thiz.renderer.domElement.onmousemove = thiz.context.on_mousemove;
+        {
+            thiz.renderer.domElement.onmousemove = function( evt )
+            {
+                thiz.context.on_mousemove.call( thiz, evt );
+            }
+        }
     }
 
     function onWindowResize()

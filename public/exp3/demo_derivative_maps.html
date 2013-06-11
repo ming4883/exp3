@@ -18,6 +18,10 @@ var textures = [];
 
 function Config()
 {
+    var msg = { 
+        rotate : "Mouse Left Button",
+        zoom : "Mouse Middle Button",
+    };
     this.bumpness = 8.0;
     this.texture = 0;
     this.mesh = 0;
@@ -25,7 +29,10 @@ function Config()
     var gui = new dat.GUI();
     
     var f;
-            
+    
+    gui.add( msg, "rotate" );
+    gui.add( msg, "zoom" );
+    
     f = gui.addFolder( "Scene" )
     f.add( this, "mesh", { cube: 0, cone: 1, sphere: 2,  } )
         .onFinishChange( function( val ) { 
@@ -113,6 +120,7 @@ var mouseState = {
     deltaY : 0,
     rotX : 0,
     rotY : 0,
+    viewZ : 0,
     onmove : function( event )
     {
         this.deltaX = event.clientX - this.downX;
@@ -127,6 +135,7 @@ function on_mousedown( event )
     mouseState.downY = event.clientY;
     mouseState.rotX = meshes[0].rotation.x;
     mouseState.rotY = meshes[0].rotation.y;
+    mouseState.viewZ = this.defaults.camera.position.z;
 }
 
 function on_mouseup( event )
@@ -140,10 +149,27 @@ function on_mousemove( event )
     {
         mouseState.onmove( event );
         
-        for ( var i = 0; i < meshes.length; ++i )
+        if ( event.button == 0 )
         {
-            meshes[i].rotation.x = mouseState.rotX + 0.01 * mouseState.deltaY;
-            meshes[i].rotation.y = mouseState.rotY + 0.01 * mouseState.deltaX;
+            var rotX = mouseState.rotX + 0.01 * mouseState.deltaY;
+            var rotY = mouseState.rotY + 0.01 * mouseState.deltaX;
+            var HALF_PI = 1.571;
+            
+            if ( rotX >  HALF_PI ) rotX =  HALF_PI;
+            if ( rotX < -HALF_PI ) rotX = -HALF_PI;
+            
+            for ( var i = 0; i < meshes.length; ++i )
+            {
+                meshes[i].rotation.x = rotX;
+                meshes[i].rotation.y = rotY;
+            }
+        }
+        else if ( event.button == 1 )
+        {
+            var viewZ =  mouseState.viewZ + 0.5 * mouseState.deltaY;
+            if ( viewZ < 100 ) viewZ = 100;
+            if ( viewZ > 400 ) viewZ = 400;
+            this.defaults.camera.position.z = viewZ;
         }
     }
 }
