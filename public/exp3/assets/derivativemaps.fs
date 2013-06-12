@@ -7,6 +7,7 @@ varying vec3 v_nrm;
 varying vec3 v_pos;
 uniform sampler2D heightMap;
 uniform float bumpness;
+uniform float specular;
 uniform vec3 camPos;
 
 vec3 CalculateSurfaceGradient( vec3 n, vec3 dpdx, vec3 dpdy, float dhdx, float dhdy )
@@ -34,11 +35,15 @@ vec3 Lighting( vec3 lightDir, vec3 lightColor, vec3 wsNormal, vec3 wsViewDir )
     float ndotl = dot( wsNormal, lightDir );
     ndotl = clamp( ndotl, 0.0, 1.0 );
     
-    float ndoth = dot( wsNormal, halfDir );
-    ndoth = clamp( ndoth, 0.0, 1.0 );
-    ndoth = pow( ndoth, 32.0 );
+    if ( specular > 0.0 )
+    {
+        float ndoth = dot( wsNormal, halfDir );
+        ndoth = clamp( ndoth, 0.0, 1.0 );
+        ndoth = pow( ndoth, 32.0 );
+        ndotl += ndoth;
+    }
     
-    return lightColor * ( ndotl + ndoth );
+    return lightColor * ndotl;
 }
 
 void main()
