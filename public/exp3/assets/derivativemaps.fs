@@ -7,20 +7,32 @@ varying vec3 v_nrm;
 varying vec3 v_pos;
 uniform sampler2D heightMap;
 uniform float bumpness;
-uniform float specular;
+uniform float useSpecular;
+uniform float useParallax;
 uniform vec3 camPos;
 
-vec3 CalculateSurfaceGradient( vec3 n, vec3 dpdx, vec3 dpdy, float dhdx, float dhdy )
+vec3 SurfaceGradient( vec3 n, vec3 dpdx, vec3 dpdy, float dhdx, float dhdy )
 {
     vec3 r1 = cross( dpdy, n );
     vec3 r2 = cross( n, dpdx );
+    float det = dot( dpdx, r1 );
  
-    return ( r1 * dhdx + r2 * dhdy ) / dot( dpdx, r1 );
+    return ( r1 * dhdx + r2 * dhdy ) / det;
+}
+
+vec2 ParallaxOffset( vec3 v, vec3 n, vec3 dpdx, vec3 dpdy, vec2 duvdx, vec2 duvdy )
+{
+    vec3 r1 = cross( dpdy, n );
+    vec3 r2 = cross( n, dpdx );
+    float det = dot( dpdx, r1 );
+ 
+    vec2 vscr = vec2( dot( r1, v ), dot( r2, v ) ) / det;
+    return duvdx * vscr.x + duvdy * vscr.y;
 }
 
 vec3 PerturbNormal( vec3 n, vec3 dpdx, vec3 dpdy, float dhdx, float dhdy )
 {
-    return normalize( n - CalculateSurfaceGradient( n, dpdx, dpdy, dhdx, dhdy ) );
+    return normalize( n - SurfaceGradient( n, dpdx, dpdy, dhdx, dhdy ) );
 }
 
 float ApplyChainRule( float dhdu, float dhdv, float dud_, float dvd_ )
@@ -35,7 +47,7 @@ vec3 Lighting( vec3 lightDir, vec3 lightColor, vec3 wsNormal, vec3 wsViewDir )
     float ndotl = dot( wsNormal, lightDir );
     ndotl = clamp( ndotl, 0.0, 1.0 );
     
-    if ( specular > 0.0 )
+    if ( useSpecular > 0.0 )
     {
         float ndoth = dot( wsNormal, halfDir );
         ndoth = clamp( ndoth, 0.0, 1.0 );
@@ -48,31 +60,41 @@ vec3 Lighting( vec3 lightDir, vec3 lightColor, vec3 wsNormal, vec3 wsViewDir )
 
 void main()
 {
+    vec3 wsViewDir = normalize( camPos - v_pos );
+    
     vec3 dpdx = dFdx( v_pos );
     vec3 dpdy = dFdy( v_pos );
- 
-#if 0
 
-    float bumpHeight = texture2D( heightMap, v_txc ).b * bumpness;
+    vec2 uv = v_txc * 2.0;
+    vec2 duvdx = dFdx( uv );
+    vec2 duvdy = dFdy( uv );
     
-    float dhdx = dFdx( bumpHeight );
-    float dhdy = dFdy( bumpHeight );
-
-#else
-    vec2 bumpGrad = ( texture2D( heightMap, v_txc ).rg * 2.0 - 1.0 );
+    float HEIGHT_SCALE = bumpness / 512.0;
     
-    vec2 uv = v_txc;
-    //uv.xy *= -1.0;
-    vec2 duvdx = dFdx( uv ) * bumpness * 64.0;
-    vec2 duvdy = dFdy( uv ) * bumpness * 64.0;
+    vec3 gradH = texture2D( heightMap, uv ).rgb;
     
-    float dhdx = ApplyChainRule( bumpGrad.x, bumpGrad.y, duvdx.x, duvdx.y );
-    float dhdy = ApplyChainRule( bumpGrad.x, bumpGrad.y, duvdy.x, duvdy.y );
-
-#endif
+    if ( useParallax > 0.0 )
+    {
+        gradH.z  = ( 1.0 - gradH.z ) * HEIGHT_SCALE;
+        
+        for ( int it = 0; it < 128; ++it )
+        {
+            uv += ParallaxOffset( wsViewDir, normalize( v_nrm ), dpdx, dpdy, duvdx, duvdy ) * vec2( -gradH.z, -gradH.z );
+            
+            duvdx = dFdx( uv );
+            duvdy = dFdy( uv );
+            
+            gradH = texture2D( heightMap, uv ).rgb;
+            gradH.z  = ( 1.0 - gradH.z ) * HEIGHT_SCALE;
+        }
+    }
+    
+    gradH.xy = ( gradH.xy * 2.0 - 1.0 ) * bumpness * 64.0;
+    
+    float dhdx = ApplyChainRule( gradH.x, gradH.y, duvdx.x, duvdx.y );
+    float dhdy = ApplyChainRule( gradH.x, gradH.y, duvdy.x, duvdy.y );
     
     vec3 wsNormal = PerturbNormal( normalize( v_nrm ), dpdx, dpdy, dhdx, dhdy );
-    vec3 wsViewDir = normalize( camPos - v_pos );
     
     vec3 diff = vec3( 0.0 );
     

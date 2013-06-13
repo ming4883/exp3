@@ -11,9 +11,9 @@ void Render(Surface dst, Surface src, Rectangle rect)
     ColorBgra tapdx;
     for (int y = rect.Top; y < rect.Bottom; y++)
     {
-        int dy = y + 1;
-        if ( dy >= src.Bounds.Bottom )
-            dy = src.Bounds.Top + dy % src.Bounds.Height;
+        int dy = y - 1;
+        if ( dy < src.Bounds.Top )
+            dy = src.Bounds.Bottom - 1;
         
         for (int x = rect.Left; x < rect.Right; x++)
         {
@@ -25,9 +25,9 @@ void Render(Surface dst, Surface src, Rectangle rect)
             tapdx = src[dx,y];
             tapdy = src[x,dy];
             
-            double h = (double)tap.R;
-            double hdx = (double)tapdx.R;
-            double hdy = (double)tapdy.R;
+            double h = (double)tap.B;
+            double hdx = (double)tapdx.B;
+            double hdy = (double)tapdy.B;
             
             // approximate the gradient with forward difference: delta = a[n+1] - a[n]
             tap.R = (byte)( (hdx - h) * 0.5 + 127.5 );

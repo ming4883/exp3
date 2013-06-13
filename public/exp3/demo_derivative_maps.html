@@ -6,7 +6,7 @@
 </head>
 <body>
     <div class="exp3.info">
-    Derivative Maps based on <a class="exp3.link" href="http://www.rorydriscoll.com/2012/01/11/derivative-maps/">rory's</a> blog post.
+    Derivative (with Parallax) Maps based on <a class="exp3.link" href="http://www.rorydriscoll.com/2012/01/11/derivative-maps/">rory's</a> blog post.
 <pre>
 Controls:
 - Rotate : Mouse Left Button
@@ -28,6 +28,7 @@ function Config()
 {
     this.bumpness = 8.0;
     this.specular = true;
+    this.parallax = true;
     this.texture = 0;
     this.mesh = 0;
     
@@ -35,6 +36,18 @@ function Config()
     
     var f;
     
+    f = gui.addFolder( "Material" );
+    f.add( this, "texture", { pyramids: 0, brick: 1, wall002: 2 } )
+        .onFinishChange( function( val ) { material.uniforms.heightMap.value = textures[val]; } );
+    f.add( this, "bumpness", 1.0, 16.0 ).step( 0.5 )
+        .onChange( function( val ) { material.uniforms.bumpness.value = val; } );
+    f.add( this, "parallax" )
+        .onChange( function( val ) { material.uniforms.useParallax.value = val ? 1.0 : 0.0; } );
+    f.add( this, "specular" )
+        .onChange( function( val ) { material.uniforms.useSpecular.value = val ? 1.0 : 0.0; } );
+    
+    f.open();
+
     f = gui.addFolder( "Scene" )
     f.add( this, "mesh", { cube: 0, cone: 1, sphere: 2,  } )
         .onFinishChange( function( val ) { 
@@ -44,16 +57,6 @@ function Config()
     
     f.open();
     
-    f = gui.addFolder( "Material" );
-    f.add( this, "texture", { pyramids: 0, wall002: 1,  } )
-        .onFinishChange( function( val ) { material.uniforms.heightMap.value = textures[val]; } );
-    f.add( this, "bumpness", 1.0, 16.0 ).step( 0.5 )
-        .onChange( function( val ) { material.uniforms.bumpness.value = val; } );
-    f.add( this, "specular" )
-        .onChange( function( val ) { material.uniforms.specular.value = val ? 1.0 : 0.0; } );
-    
-    f.open();
-
 }
 
 function on_init( )
@@ -67,13 +70,15 @@ function on_init( )
     
     this.defaults.camera.position.set( 0.0, 0.0, 200.0 );
     
-    var texpaths = [ "assets/pyramids_grad.png", "assets/wall002_grad.png" ];
+    var texpaths = [ "assets/pyramids_grad.png", "assets/brick_grad.png", "assets/wall002_grad.png" ];
     
     for ( var i = 0; i < texpaths.length; ++i )
     {
         var tex = THREE.ImageUtils.loadTexture( texpaths[i] );
         tex.anisotropy = this.renderer.getMaxAnisotropy();
         tex.minFilter = tex.magFilter = THREE.LinearFilter;
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
         textures.push( tex );
     }
     
@@ -81,7 +86,8 @@ function on_init( )
         uniforms : { 
             heightMap: { type: "t", value: textures[0] },
             bumpness : { type: "f", value: config.bumpness },
-            specular : { type: "f", value: config.specular ? 1.0 : 0.0 },
+            useSpecular : { type: "f", value: config.specular ? 1.0 : 0.0 },
+            useParallax : { type: "f", value: config.parallax ? 1.0 : 0.0 },
             camPos : { type: "v3", value: this.defaults.camera.position },
         },
         vertexShader   : this.loadText( "./assets/derivativemaps.vs" ),
@@ -172,7 +178,7 @@ function on_mousemove( event )
         else if ( event.button == 2 )
         {
             var viewZ =  mouseState.viewZ + 0.5 * mouseState.deltaY;
-            if ( viewZ < 100 ) viewZ = 100;
+            if ( viewZ < 80 ) viewZ = 80;
             if ( viewZ > 400 ) viewZ = 400;
             this.defaults.camera.position.z = viewZ;
         }
