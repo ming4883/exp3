@@ -15,6 +15,7 @@ Controls:
     </div>
 
     <script src="../threejs/build/three.min.js"></script>
+    <script src="./js/stats.min.js"></script>
     <script src="./js/exp3.js"></script>
     <script src="./js/dat.gui.min.js"></script>
     <script>
@@ -29,6 +30,7 @@ function Config()
     this.bumpness = 8.0;
     this.specular = true;
     this.parallax = true;
+    this.debug = false;
     this.texture = 0;
     this.mesh = 0;
     
@@ -45,6 +47,8 @@ function Config()
         .onChange( function( val ) { material.uniforms.useParallax.value = val ? 1.0 : 0.0; } );
     f.add( this, "specular" )
         .onChange( function( val ) { material.uniforms.useSpecular.value = val ? 1.0 : 0.0; } );
+    f.add( this, "debug" )
+        .onChange( function( val ) { material.uniforms.debug.value = val ? 1.0 : 0.0; } );
     
     f.open();
 
@@ -62,6 +66,8 @@ function Config()
 function on_init( )
 {
     config = new Config();
+    
+    this.enableStats();
     
     this.renderer.context.getExtension( "OES_standard_derivatives" );
     
@@ -86,8 +92,9 @@ function on_init( )
         uniforms : { 
             heightMap: { type: "t", value: textures[0] },
             bumpness : { type: "f", value: config.bumpness },
-            useSpecular : { type: "f", value: config.specular ? 1.0 : 0.0 },
             useParallax : { type: "f", value: config.parallax ? 1.0 : 0.0 },
+            useSpecular : { type: "f", value: config.specular ? 1.0 : 0.0 },
+            debug : { type: "f", value: config.debug ? 1.0 : 0.0 },
             camPos : { type: "v3", value: this.defaults.camera.position },
         },
         vertexShader   : this.loadText( "./assets/derivativemaps.vs" ),

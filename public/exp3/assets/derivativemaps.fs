@@ -9,6 +9,7 @@ uniform sampler2D heightMap;
 uniform float bumpness;
 uniform float useSpecular;
 uniform float useParallax;
+uniform float debug;
 uniform vec3 camPos;
 
 vec3 SurfaceGradient( vec3 n, vec3 dpdx, vec3 dpdy, float dhdx, float dhdy )
@@ -81,8 +82,11 @@ void main()
         {
             uv += ParallaxOffset( wsViewDir, normalize( v_nrm ), dpdx, dpdy, duvdx, duvdy ) * vec2( -gradH.z, -gradH.z );
             
-            duvdx = dFdx( uv );
-            duvdy = dFdy( uv );
+            if ( debug > 0.0 )
+            {
+                duvdx = dFdx( uv );
+                duvdy = dFdy( uv );
+            }
             
             gradH = texture2D( heightMap, uv ).rgb;
             gradH.z  = ( 1.0 - gradH.z ) * HEIGHT_SCALE;

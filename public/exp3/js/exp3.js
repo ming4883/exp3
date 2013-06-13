@@ -108,6 +108,17 @@ function Exp3( ctx )
             }
         }
     }
+    
+    thiz.enableStats = function ()
+    {
+        this.stats = new Stats();
+        this.stats.setMode( 0 );
+        
+        this.stats.domElement.style.position = "absolute";
+        this.stats.domElement.style.left = "0px";
+        this.stats.domElement.style.bottom = "0px";
+        document.body.appendChild( this.stats.domElement );
+    }
 
     function onWindowResize()
     {
@@ -120,9 +131,15 @@ function Exp3( ctx )
     function animate()
     {
         requestAnimationFrame( animate );
+        
+        if ( thiz.stats )
+            thiz.stats.begin();
 
         if ( thiz.context.on_render )
             thiz.context.on_render.call( thiz );
+            
+        if ( thiz.stats )
+            thiz.stats.end();
     }
     
     init();
