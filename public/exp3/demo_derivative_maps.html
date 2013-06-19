@@ -27,22 +27,36 @@ var textures = [];
 
 function Config()
 {
-    this.bumpness = 8.0;
+    var thiz = this;
+    this.bumpness = 16.0;
     this.specular = true;
     this.parallax = true;
     this.debug = false;
     this.texture = 0;
     this.mesh = 0;
     
+    this.shaderBumpness = function()
+    {
+        return ( this.bumpness / 64.0 ) * textures[this.texture].image.width;
+    }
+    
+    this.shaderParallaxHeight = function()
+    {
+        return this.bumpness / 8.0;
+    }
+    
     var gui = new dat.GUI();
     
     var f;
     
     f = gui.addFolder( "Material" );
-    f.add( this, "texture", { brick: 0, pyramids: 1, wall002: 2 } )
-        .onFinishChange( function( val ) { material.uniforms.heightMap.value = textures[val]; } );
-    f.add( this, "bumpness", 1.0, 16.0 ).step( 0.5 )
-        .onChange( function( val ) { material.uniforms.bumpness.value = val; } );
+    f.add( this, "texture", { brick: 0, pyramids: 1, stones: 2 } )
+        .onFinishChange( function( val ) { 
+            material.uniforms.heightMap.value = textures[val];
+        } );
+    
+    f.add( this, "bumpness", 1.0, 32.0 ).step( 0.5 );
+    
     f.add( this, "parallax" )
         .onChange( function( val ) { material.uniforms.useParallax.value = val ? 1.0 : 0.0; } );
     f.add( this, "specular" )
@@ -76,7 +90,7 @@ function on_init( )
     
     this.defaults.camera.position.set( 0.0, 0.0, 200.0 );
     
-    var texpaths = [ "assets/brick_grad.png", "assets/pyramids_grad.png", "assets/wall002_grad.png" ];
+    var texpaths = [ "assets/brick_grad.png", "assets/pyramids_grad.png", "assets/stones_grad.png" ];
     
     for ( var i = 0; i < texpaths.length; ++i )
     {
@@ -91,7 +105,8 @@ function on_init( )
     material = new THREE.ShaderMaterial( {
         uniforms : { 
             heightMap: { type: "t", value: textures[0] },
-            bumpness : { type: "f", value: config.bumpness },
+            bumpness : { type: "f", value: config.shaderBumpness() },
+            parallaxHeight : { type: "f", value: config.shaderParallaxHeight() },
             useParallax : { type: "f", value: config.parallax ? 1.0 : 0.0 },
             useSpecular : { type: "f", value: config.specular ? 1.0 : 0.0 },
             debug : { type: "f", value: config.debug ? 1.0 : 0.0 },
@@ -102,7 +117,7 @@ function on_init( )
         } );
 
     var geoms = [
-        new THREE.CubeGeometry( 100, 100, 100 ),
+        new THREE.Exp3CubeGeometry( 100, 100, 100 ),
         new THREE.CylinderGeometry( 10, 50, 100, 32 ),
         new THREE.SphereGeometry( 50, 32, 32 ),
         ];
@@ -127,6 +142,9 @@ function on_render( )
 {
     material.uniforms.camPos.value =  this.defaults.camera.position;
 
+    material.uniforms.parallaxHeight.value = config.shaderParallaxHeight();
+    material.uniforms.bumpness.value = config.shaderBumpness();
+            
     this.renderer.render( this.defaults.scene, this.defaults.camera );
 }
 

@@ -7,6 +7,7 @@ varying vec3 v_nrm;
 varying vec3 v_pos;
 uniform sampler2D heightMap;
 uniform float bumpness;
+uniform float parallaxHeight;
 uniform float useSpecular;
 uniform float useParallax;
 uniform float debug;
@@ -51,6 +52,7 @@ vec3 Lighting( vec3 lightDir, vec3 lightColor, vec3 wsNormal, vec3 wsViewDir )
 
     float ndotl = dot( wsNormal, lightDir );
     ndotl = clamp( ndotl, 0.0, 1.0 );
+    ndotl = ndotl * ndotl;
     
     if ( useSpecular > 0.0 )
     {
@@ -74,8 +76,7 @@ void main()
     vec2 duvdx = dFdx( uv );
     vec2 duvdy = dFdy( uv );
     
-    float HEIGHT_SCALE = bumpness / 8.0;
-    float S =  HEIGHT_SCALE;
+    float S = parallaxHeight;
     float B = S * -0.5;
     
     vec3 gradH = texture2D( heightMap, uv ).rgb;
@@ -84,23 +85,17 @@ void main()
     {
         gradH.z = gradH.z * S + B; 
         
-        for ( int it = 0; it < 2; ++it )
+        for ( int it = 0; it < 1; ++it )
         {
             vec3 vtex = ParallaxOffset( wsViewDir, normalize( v_nrm ), dpdx, dpdy, duvdx, duvdy );
             uv += vtex.xy * gradH.z;
-            
-            if ( debug > 0.0 )
-            {
-                duvdx = dFdx( uv );
-                duvdy = dFdy( uv );
-            }
             
             gradH = texture2D( heightMap, uv ).rgb;
             gradH.z = gradH.z * S + B; 
         }
     }
     
-    gradH.xy = ( gradH.xy * 2.0 - 1.0 ) * bumpness * 32.0;
+    gradH.xy = ( gradH.xy * 2.0 - 1.0 ) * bumpness;
     
     float dhdx = ApplyChainRule( gradH.x, gradH.y, duvdx.x, duvdx.y );
     float dhdy = ApplyChainRule( gradH.x, gradH.y, duvdy.x, duvdy.y );
