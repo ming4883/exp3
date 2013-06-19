@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>exp3 - basic_shader</title>
+    <meta charset="utf-8">
+</head>
+<body>
+
+    <script src="./js/three.min.js"></script>
+    <script src="./js/exp3.js"></script>
+    <script>
+
+var mesh;
+
+function on_init( )
+{
+    this.defaults.camera.position.z = 400;
+
+    var geometry = new THREE.CubeGeometry( 200, 200, 200 );
+    
+    var material = new THREE.ShaderMaterial( {
+        uniforms : { fixedColor: { type: "v4", value: new THREE.Vector4( 0.5, 0.75, 1.0, 1.0 ) } },
+        vertexShader : this.loadText( "./assets/unlit.vs" ),
+        fragmentShader : this.loadText( "./assets/unlit.fixedcolor.fs" ),
+        } );
+
+    mesh = new THREE.Mesh( geometry, material );
+    this.defaults.scene.add( mesh );
+}
+
+function on_resize( width, height )
+{
+    this.defaults.camera.aspect = width / height;
+    this.defaults.camera.updateProjectionMatrix();
+}
+
+function on_render( )
+{
+    mesh.rotation.x += 0.0025;
+    mesh.rotation.y += 0.005;
+
+    this.renderer.render( this.defaults.scene, this.defaults.camera );
+}
+
+new Exp3( {
+    bgcolor : "#202020",
+    on_init : on_init, 
+    on_resize : on_resize, 
+    on_render : on_render 
+    } );
+
+    </script>
+
+</body>
+</html>

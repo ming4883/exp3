@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>exp3 - demo_derivative_maps</title>
+    <meta charset="utf-8">
+</head>
+<body>
+    <div class="exp3.info">
+    Derivative (with Parallax) Maps based on <a class="exp3.link" href="http://www.rorydriscoll.com/2012/01/11/derivative-maps/">rory's</a> blog post.
+<pre>
+Controls:
+- Rotate : Mouse Left Button
+- Zoom   : Mouse Right Button
+</pre>
+    </div>
+
+    <script src="./js/three.min.js"></script>
+    <script src="./js/stats.min.js"></script>
+    <script src="./js/exp3.js"></script>
+    <script src="./js/dat.gui.min.js"></script>
+    <script>
+
+var meshes = [];
+var material;
+var config;
+var textures = [];
+
+function Config()
+{
+    var thiz = this;
+    this.bumpness = 16.0;
+    this.specular = true;
+    this.parallax = true;
+    this.debug = false;
+    this.texture = 0;
+    this.mesh = 0;
+    
+    this.shaderBumpness = function()
+    {
+        return ( this.bumpness / 64.0 ) * textures[this.texture].image.width;
+    }
+    
+    this.shaderParallaxHeight = function()
+    {
+        return this.bumpness / 8.0;
+    }
+    
+    var gui = new dat.GUI();
+    
+    var f;
+    
+    f = gui.addFolder( "Material" );
+    f.add( this, "texture", { brick: 0, pyramids: 1, stones: 2 } )
+        .onFinishChange( function( val ) { 
+            material.uniforms.heightMap.value = textures[val];
+        } );
+    
+    f.add( this, "bumpness", 1.0, 32.0 ).step( 0.5 );
+    
+    f.add( this, "parallax" )
+        .onChange( function( val ) { material.uniforms.useParallax.value = val ? 1.0 : 0.0; } );
+    f.add( this, "specular" )
+        .onChange( function( val ) { material.uniforms.useSpecular.value = val ? 1.0 : 0.0; } );
+    f.add( this, "debug" )
+        .onChange( function( val ) { material.uniforms.debug.value = val ? 1.0 : 0.0; } );
+    
+    f.open();
+
+    f = gui.addFolder( "Scene" )
+    f.add( this, "mesh", { cube: 0, cone: 1, sphere: 2,  } )
+        .onFinishChange( function( val ) { 
+            for ( var i = 0; i < meshes.length; ++i )
+                meshes[i].visible = ( i == val );
+        } );
+    
+    f.open();
+    
+}
+
+function on_init( )
+{
+    config = new Config();
+    
+    this.enableStats();
+    
+    this.renderer.context.getExtension( "OES_standard_derivatives" );
+    
+    //controls = new THREE.TrackballControls( this.defaults.camera );
+    //controls.dynamicDampingFactor = 0.25;
+    
+    this.defaults.camera.position.set( 0.0, 0.0, 200.0 );
+    
+    var texpaths = [ "assets/brick_grad.png", "assets/pyramids_grad.png", "assets/stones_grad.png" ];
+    
+    for ( var i = 0; i < texpaths.length; ++i )
+    {
+        var tex = THREE.ImageUtils.loadTexture( texpaths[i] );
+        tex.anisotropy = this.renderer.getMaxAnisotropy();
+        tex.minFilter = tex.magFilter = THREE.LinearFilter;
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        textures.push( tex );
+    }
+    
+    material = new THREE.ShaderMaterial( {
+        uniforms : { 
+            heightMap: { type: "t", value: textures[0] },
+            bumpness : { type: "f", value: config.shaderBumpness() },
+            parallaxHeight : { type: "f", value: config.shaderParallaxHeight() },
+            useParallax : { type: "f", value: config.parallax ? 1.0 : 0.0 },
+            useSpecular : { type: "f", value: config.specular ? 1.0 : 0.0 },
+            debug : { type: "f", value: config.debug ? 1.0 : 0.0 },
+            camPos : { type: "v3", value: this.defaults.camera.position },
+        },
+        vertexShader   : this.loadText( "./assets/derivativemaps.vs" ),
+        fragmentShader : this.loadText( "./assets/derivativemaps.fs" ),
+        } );
+
+    var geoms = [
+        new THREE.Exp3CubeGeometry( 100, 100, 100 ),
+        new THREE.CylinderGeometry( 10, 50, 100, 32 ),
+        new THREE.SphereGeometry( 50, 32, 32 ),
+        ];
+    
+    for ( var i = 0; i < geoms.length; ++i )
+    {
+        var mesh = new THREE.Mesh( geoms[i], material );
+        this.defaults.scene.add( mesh );
+        mesh.visible = false;
+        meshes.push( mesh );
+    }
+    meshes[0].visible = true;
+}
+
+function on_resize( width, height )
+{
+    this.defaults.camera.aspect = width / height;
+    this.defaults.camera.updateProjectionMatrix();
+}
+
+function on_render( )
+{
+    material.uniforms.camPos.value =  this.defaults.camera.position;
+
+    material.uniforms.parallaxHeight.value = config.shaderParallaxHeight();
+    material.uniforms.bumpness.value = config.shaderBumpness();
+            
+    this.renderer.render( this.defaults.scene, this.defaults.camera );
+}
+
+var mouseState = {
+    down : false,
+    downX : 0,
+    downY : 0,
+    deltaX : 0,
+    deltaY : 0,
+    rotX : 0,
+    rotY : 0,
+    viewZ : 0,
+    onmove : function( event )
+    {
+        this.deltaX = event.clientX - this.downX;
+        this.deltaY = event.clientY - this.downY;
+    }
+};
+
+function on_mousedown( event )
+{
+    mouseState.down = true;
+    mouseState.downX = event.clientX;
+    mouseState.downY = event.clientY;
+    mouseState.rotX = meshes[0].rotation.x;
+    mouseState.rotY = meshes[0].rotation.y;
+    mouseState.viewZ = this.defaults.camera.position.z;
+}
+
+function on_mouseup( event )
+{
+    mouseState.down = false;
+}
+
+function on_mousemove( event )
+{
+    if ( mouseState.down )
+    {
+        mouseState.onmove( event );
+        
+        if ( event.button == 0 )
+        {
+            var rotX = mouseState.rotX + 0.01 * mouseState.deltaY;
+            var rotY = mouseState.rotY + 0.01 * mouseState.deltaX;
+            var HALF_PI = 1.571;
+            
+            if ( rotX >  HALF_PI ) rotX =  HALF_PI;
+            if ( rotX < -HALF_PI ) rotX = -HALF_PI;
+            
+            for ( var i = 0; i < meshes.length; ++i )
+            {
+                meshes[i].rotation.x = rotX;
+                meshes[i].rotation.y = rotY;
+            }
+        }
+        else if ( event.button == 2 )
+        {
+            var viewZ =  mouseState.viewZ + 0.5 * mouseState.deltaY;
+            if ( viewZ < 80 ) viewZ = 80;
+            if ( viewZ > 400 ) viewZ = 400;
+            this.defaults.camera.position.z = viewZ;
+        }
+    }
+}
+
+new Exp3( {
+    bgcolor : "#202020",
+    on_init : on_init, 
+    on_resize : on_resize, 
+    on_render : on_render,
+    on_mousedown : on_mousedown,
+    on_mouseup : on_mouseup,
+    on_mousemove : on_mousemove,
+    } );
+
+    </script>
+
+</body>
+</html>
