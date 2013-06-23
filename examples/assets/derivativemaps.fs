@@ -8,8 +8,8 @@ varying vec3 v_pos;
 uniform sampler2D heightMap;
 uniform float bumpness;
 uniform float parallaxHeight;
+uniform float parallaxSampleCount;
 uniform float useSpecular;
-uniform float useParallax;
 uniform float debug;
 uniform vec3 camPos;
 
@@ -74,6 +74,7 @@ float Displacement( float h, float s, float b )
 void main()
 {
     vec3 wsViewDir = normalize( camPos - v_pos );
+    vec3 wsNormal = normalize( v_nrm );
     
     vec3 dpdx = dFdx( v_pos );
     vec3 dpdy = dFdy( v_pos );
@@ -84,9 +85,9 @@ void main()
     
     vec3 gradH;
     
-    if ( useParallax > 0.0 )
+    if ( parallaxHeight > 0.0 )
     {
-        vec3 vViewTS = ParallaxOffset( wsViewDir, normalize( v_nrm ), dpdx, dpdy, duvdx, duvdy );
+        vec3 vViewTS = ParallaxOffset( wsViewDir, wsNormal, dpdx, dpdy, duvdx, duvdy );
         
         // Compute initial parallax displacement direction:
         vec2 vParallaxDirection = normalize(  vViewTS.xy );
@@ -102,8 +103,9 @@ void main()
         // in height maps. This is controlled by an artist-editable parameter:
         vParallaxOffsetTS *= parallaxHeight;
         
-        int nNumSteps   = 64;
-        float fStepSize = 1.0 / float(nNumSteps);
+        //int nNumSteps   = 64;
+        int nNumSteps   = int( mix( parallaxSampleCount * 2.0, parallaxSampleCount, clamp( dot( wsViewDir, wsNormal ), 0.0, 1.0 ) ) );
+        float fStepSize = 1.0 / float( nNumSteps );
         float fCurrHeight = 0.0;
         float fPrevHeight = 1.0;
         
@@ -155,23 +157,6 @@ void main()
 
         // The computed texture offset for the displaced point on the pseudo-extruded surface:
         uv = uv - vParallaxOffset;
-        
-        /*
-        float S = parallaxHeight;
-        float B = S * -0.5;
-        
-        gradH = texture2D( heightMap, uv ).rgb;
-        gradH.z = Displacement( gradH.z, S, B );
-        
-        for ( int it = 0; it < 1; ++it )
-        {
-            vec3 vtex = ParallaxOffset( wsViewDir, normalize( v_nrm ), dpdx, dpdy, duvdx, duvdy );
-            uv += vtex.xy * gradH.z;
-            
-            gradH = texture2D( heightMap, uv ).rgb;
-            gradH.z = Displacement( gradH.z, S, B ); 
-        }
-        */
     }
     
     gradH = texture2D( heightMap, uv ).rgb;
@@ -181,7 +166,7 @@ void main()
     float dhdx = ApplyChainRule( gradH.x, gradH.y, duvdx.x, duvdx.y );
     float dhdy = ApplyChainRule( gradH.x, gradH.y, duvdy.x, duvdy.y );
     
-    vec3 wsNormal = PerturbNormal( normalize( v_nrm ), dpdx, dpdy, dhdx, dhdy );
+    wsNormal = PerturbNormal( wsNormal, dpdx, dpdy, dhdx, dhdy );
     
     vec3 diff = vec3( 0.0 );
     

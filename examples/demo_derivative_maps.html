@@ -29,8 +29,8 @@ function Config()
 {
     var thiz = this;
     this.bumpness = 16.0;
+    this.parallaxHeight = 16.0;
     this.specular = true;
-    this.parallax = true;
     this.debug = false;
     this.texture = 0;
     this.mesh = 0;
@@ -43,7 +43,12 @@ function Config()
     
     this.shaderParallaxHeight = function()
     {
-        return this.bumpness / 8.0;
+        return this.parallaxHeight / 8.0;
+    }
+    
+    this.shaderParallaxSampleCount = function()
+    {
+        return this.parallaxHeight;
     }
     
     var gui = new dat.GUI();
@@ -57,9 +62,8 @@ function Config()
         } );
     
     f.add( this, "bumpness", 1.0, 32.0 ).step( 0.5 );
+    f.add( this, "parallaxHeight", 0.0, 32.0 ).step( 0.5 );
     
-    f.add( this, "parallax" )
-        .onChange( function( val ) { material.uniforms.useParallax.value = val ? 1.0 : 0.0; } );
     f.add( this, "specular" )
         .onChange( function( val ) { material.uniforms.useSpecular.value = val ? 1.0 : 0.0; } );
     f.add( this, "debug" )
@@ -108,7 +112,7 @@ function on_init( )
             heightMap: { type: "t", value: textures[0] },
             bumpness : { type: "f", value: config.shaderBumpness() },
             parallaxHeight : { type: "f", value: config.shaderParallaxHeight() },
-            useParallax : { type: "f", value: config.parallax ? 1.0 : 0.0 },
+            parallaxSampleCount : { type: "f", value: config.shaderParallaxSampleCount() },
             useSpecular : { type: "f", value: config.specular ? 1.0 : 0.0 },
             debug : { type: "f", value: config.debug ? 1.0 : 0.0 },
             camPos : { type: "v3", value: this.defaults.camera.position },
@@ -143,9 +147,10 @@ function on_render( )
 {
     material.uniforms.camPos.value =  this.defaults.camera.position;
 
-    material.uniforms.parallaxHeight.value = config.shaderParallaxHeight();
     material.uniforms.bumpness.value = config.shaderBumpness();
-            
+    material.uniforms.parallaxHeight.value = config.shaderParallaxHeight();
+    material.uniforms.parallaxSampleCount.value = config.shaderParallaxSampleCount();
+    
     this.renderer.render( this.defaults.scene, this.defaults.camera );
 }
 
