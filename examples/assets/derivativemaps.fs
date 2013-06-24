@@ -85,6 +85,9 @@ void main()
     
     vec3 gradH;
     
+    float occlusion = 1.0;
+    vec4 debugVal = vec4( 0.0 );
+    
     if ( parallaxHeight > 0.0 )
     {
         vec3 vViewTS = ParallaxOffset( wsViewDir, wsNormal, dpdx, dpdy, duvdx, duvdy );
@@ -117,7 +120,9 @@ void main()
         vec2 pt1;
         vec2 pt2;
         
-        for ( int it = 0; it < nNumSteps; ++it )
+        int it;
+        
+        for ( it = 0; it < nNumSteps; ++it )
         {
             vTexCurrentOffset -= vTexOffsetPerStep;
             
@@ -157,21 +162,41 @@ void main()
 
         // The computed texture offset for the displaced point on the pseudo-extruded surface:
         uv = uv - vParallaxOffset;
+        
+        occlusion = fCurrentBound * 0.875 + 0.125;
+        
+        float clipMax = 2.0 + 1.0 / 256.0;
+        float clipMin = -1.0 / 256.0;
+        if ( uv.x >= clipMax || uv.y >= clipMax
+          || uv.x <= clipMin || uv.y <= clipMin )
+        {
+            discard;
+        }
+        
+        debugVal = vec4( length( vParallaxOffset ) );
     }
     
-    gradH = texture2D( heightMap, uv ).rgb;
-    
-    gradH.xy = ( gradH.xy * 2.0 - 1.0 ) * bumpness;
-    
-    float dhdx = ApplyChainRule( gradH.x, gradH.y, duvdx.x, duvdx.y );
-    float dhdy = ApplyChainRule( gradH.x, gradH.y, duvdy.x, duvdy.y );
-    
-    wsNormal = PerturbNormal( wsNormal, dpdx, dpdy, dhdx, dhdy );
-    
-    vec3 diff = vec3( 0.0 );
-    
-    diff += Lighting( normalize( vec3( 1.0, 1.0, 1.0 ) ), vec3( 1.0, 0.702, 0.351 ) * 0.75, wsNormal, wsViewDir );
-    diff += Lighting( normalize( vec3(-1.0,-1.0, 1.0 ) ), vec3( 0.702, 0.702, 1.0 ) * 0.75, wsNormal, wsViewDir );
-    
-    gl_FragColor = vec4( diff, 1.0 );
+    if ( debug > 0.0 )
+    {
+        gl_FragColor = debugVal;
+    }
+    else
+    {
+        gradH = texture2D( heightMap, uv ).rgb;
+        
+        gradH.xy = ( gradH.xy * 2.0 - 1.0 ) * bumpness;
+        
+        float dhdx = ApplyChainRule( gradH.x, gradH.y, duvdx.x, duvdx.y );
+        float dhdy = ApplyChainRule( gradH.x, gradH.y, duvdy.x, duvdy.y );
+        
+        wsNormal = PerturbNormal( wsNormal, dpdx, dpdy, dhdx, dhdy );
+        
+        vec3 diff = vec3( 0.0 );
+        
+        diff += Lighting( normalize( vec3( 1.0, 1.0, 1.0 ) ), vec3( 1.0, 0.702, 0.351 ) * 0.75, wsNormal, wsViewDir );
+        diff += Lighting( normalize( vec3(-1.0,-1.0, 1.0 ) ), vec3( 0.702, 0.702, 1.0 ) * 0.75, wsNormal, wsViewDir );
+        
+        diff *= occlusion;
+        gl_FragColor = vec4( diff, 1.0 );
+    }
 }
