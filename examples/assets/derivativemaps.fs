@@ -6,9 +6,12 @@ varying vec2 v_txc;
 varying vec3 v_nrm;
 varying vec3 v_pos;
 uniform sampler2D heightMap;
+uniform float tile;
 uniform float bumpness;
 uniform float parallaxHeight;
 uniform float parallaxSampleCount;
+uniform float occlusion;
+uniform float useParallax;
 uniform float useSpecular;
 uniform float debug;
 uniform vec3 camPos;
@@ -79,16 +82,16 @@ void main()
     vec3 dpdx = dFdx( v_pos );
     vec3 dpdy = dFdy( v_pos );
 
-    vec2 uv = v_txc * 2.0;
+    vec2 uv = v_txc * tile;
     vec2 duvdx = dFdx( uv );
     vec2 duvdy = dFdy( uv );
     
     vec3 gradH;
     
-    float occlusion = 1.0;
+    float ao = 1.0;
     vec4 debugVal = vec4( 0.0 );
     
-    if ( parallaxHeight > 0.0 )
+    if ( useParallax > 0.0 )
     {
         vec3 vViewTS = ParallaxOffset( wsViewDir, wsNormal, dpdx, dpdy, duvdx, duvdy );
         
@@ -163,17 +166,20 @@ void main()
         // The computed texture offset for the displaced point on the pseudo-extruded surface:
         uv = uv - vParallaxOffset;
         
-        occlusion = fCurrentBound * 0.875 + 0.125;
-        
-        float clipMax = 2.0 + 1.0 / 256.0;
-        float clipMin = -1.0 / 256.0;
+        float clipMax = tile;
+        float clipMin = 0.0;
         if ( uv.x >= clipMax || uv.y >= clipMax
           || uv.x <= clipMin || uv.y <= clipMin )
         {
             discard;
         }
         
-        debugVal = vec4( length( vParallaxOffset ) );
+        ao = mix( 1.0, max( 0.0, fCurrentBound ), occlusion );
+        
+        debugVal = vec4( ao );
+        
+        //debugVal = vec4( length( vParallaxOffset ) > clipLimit ? 1.0 : 0.0 );
+        //debugVal = vec4( clipLimit );
     }
     
     if ( debug > 0.0 )
@@ -196,7 +202,7 @@ void main()
         diff += Lighting( normalize( vec3( 1.0, 1.0, 1.0 ) ), vec3( 1.0, 0.702, 0.351 ) * 0.75, wsNormal, wsViewDir );
         diff += Lighting( normalize( vec3(-1.0,-1.0, 1.0 ) ), vec3( 0.702, 0.702, 1.0 ) * 0.75, wsNormal, wsViewDir );
         
-        diff *= occlusion;
+        diff *= ao;
         gl_FragColor = vec4( diff, 1.0 );
     }
 }
