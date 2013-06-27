@@ -18,6 +18,7 @@ Controls:
     <script src="./js/stats.min.js"></script>
     <script src="./js/exp3.js"></script>
     <script src="./js/dat.gui.min.js"></script>
+    <script src="./js/OBJLoader.js"></script>
     <script>
 
 var meshes = [];
@@ -33,6 +34,7 @@ function Config()
     this.parallaxHeight = 16.0;
     this.occlusion = 0.75;
     this.parallax = true;
+    this.silhouette = true;
     this.specular = true;
     this.debug = false;
     this.texture = 0;
@@ -57,6 +59,15 @@ function Config()
     
     var f;
     
+    f = gui.addFolder( "Scene" )
+    f.add( this, "mesh", { cube: 0, cylinder: 1, sphere: 2,  } )
+        .onFinishChange( function( val ) { 
+            for ( var i = 0; i < meshes.length; ++i )
+                meshes[i].visible = ( i == val );
+        } );
+    
+    f.open();
+    
     f = gui.addFolder( "Material" );
     f.add( this, "texture", { brick: 0, pyramids: 1, stones: 2 } )
         .onFinishChange( function( val ) { 
@@ -70,6 +81,8 @@ function Config()
     
     f.add( this, "parallax" )
         .onChange( function( val ) { material.uniforms.useParallax.value = val ? 1.0 : 0.0; } );
+    f.add( this, "silhouette" )
+        .onChange( function( val ) { material.uniforms.useSilhouette.value = val ? 1.0 : 0.0; } );
     f.add( this, "specular" )
         .onChange( function( val ) { material.uniforms.useSpecular.value = val ? 1.0 : 0.0; } );
     f.add( this, "debug" )
@@ -77,14 +90,6 @@ function Config()
     
     f.open();
 
-    f = gui.addFolder( "Scene" )
-    f.add( this, "mesh", { cube: 0, cone: 1, sphere: 2,  } )
-        .onFinishChange( function( val ) { 
-            for ( var i = 0; i < meshes.length; ++i )
-                meshes[i].visible = ( i == val );
-        } );
-    
-    f.open();
     
 }
 
@@ -119,6 +124,7 @@ function on_init( )
             occlusion : { type: "f", value: config.occlusion },
             parallaxSampleCount : { type: "f", value: config.shaderParallaxSampleCount() },
             useParallax : { type: "f", value: config.parallax ? 1.0 : 0.0 },
+            useSilhouette : { type: "f", value: config.silhouette ? 1.0 : 0.0 },
             useSpecular : { type: "f", value: config.specular ? 1.0 : 0.0 },
             debug : { type: "f", value: config.debug ? 1.0 : 0.0 },
             camPos : { type: "v3", value: this.defaults.camera.position },
@@ -129,7 +135,7 @@ function on_init( )
 
     var geoms = [
         new THREE.CubeGeometry( 100, 100, 100 ),
-        new THREE.CylinderGeometry( 10, 50, 100, 32 ),
+        new THREE.CylinderGeometry( 50, 50, 100, 32 ),
         new THREE.SphereGeometry( 50, 32, 32 ),
         ];
     

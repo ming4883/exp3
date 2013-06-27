@@ -12,6 +12,7 @@ uniform float parallaxHeight;
 uniform float parallaxSampleCount;
 uniform float occlusion;
 uniform float useParallax;
+uniform float useSilhouette;
 uniform float useSpecular;
 uniform float debug;
 uniform vec3 camPos;
@@ -33,8 +34,8 @@ vec3 ParallaxOffset( vec3 v, vec3 n, vec3 dpdx, vec3 dpdy, vec2 duvdx, vec2 duvd
  
     vec2 vscr = vec2( dot( r1, v ), dot( r2, v ) ) / det;
     vec3 vtex;
-    //vtex.z  = dot( n, v ) / parallaxHeight;
-    vtex.z  = dot( n, v );
+    vtex.z  = dot( n, v ) / parallaxHeight;
+    //vtex.z  = dot( n, v );
     vtex.xy = duvdx * vscr.x + duvdy * vscr.y;
     
     return vtex;
@@ -50,13 +51,13 @@ float ApplyChainRule( float dhdu, float dhdv, float dud_, float dvd_ )
     return dhdu * dud_ + dhdv * dvd_;
 }
 
-vec3 Lighting( vec3 lightDir, vec3 lightColor, vec3 wsNormal, vec3 wsViewDir )
+vec3 Lighting( vec3 lightDir, vec3 lightColor, vec3 wsNormal, vec3 wsViewDir, float ao )
 {
     vec3 halfDir = normalize( lightDir + wsViewDir );
 
     float ndotl = dot( wsNormal, lightDir );
     ndotl = clamp( ndotl, 0.0, 1.0 );
-    ndotl = ndotl * ndotl;
+    //ndotl = ndotl * ndotl * ao;
     
     if ( useSpecular > 0.0 )
     {
@@ -65,6 +66,8 @@ vec3 Lighting( vec3 lightDir, vec3 lightColor, vec3 wsNormal, vec3 wsViewDir )
         ndoth = pow( ndoth, 32.0 );
         ndotl += ndoth;
     }
+    
+    ndotl *= ao;
     
     return lightColor * ndotl;
 }
@@ -123,10 +126,11 @@ void main()
         vec2 pt1;
         vec2 pt2;
         
-        int it;
-        
-        for ( it = 0; it < nNumSteps; ++it )
+        for ( int it = 0; it < 512; ++it )
         {
+            if ( it >= nNumSteps )
+                break;
+
             vTexCurrentOffset -= vTexOffsetPerStep;
             
             gradH = texture2D( heightMap, vTexCurrentOffset ).rgb;
@@ -166,12 +170,19 @@ void main()
         // The computed texture offset for the displaced point on the pseudo-extruded surface:
         uv = uv - vParallaxOffset;
         
-        float clipMax = tile;
-        float clipMin = 0.0;
-        if ( uv.x >= clipMax || uv.y >= clipMax
-          || uv.x <= clipMin || uv.y <= clipMin )
+        if ( useSilhouette > 0.0 )
         {
-            discard;
+            float clipMax = tile;
+            float clipMin = 0.0;
+            
+            
+            if ( uv.x >= clipMax || uv.y >= clipMax
+              || uv.x <= clipMin || uv.y <= clipMin )
+            {
+                discard;
+            }
+            
+            /*uv = clamp( uv, clipMin, clipMax );*/
         }
         
         ao = mix( 1.0, max( 0.0, fCurrentBound ), occlusion );
@@ -182,27 +193,27 @@ void main()
         //debugVal = vec4( clipLimit );
     }
     
+    gradH = texture2D( heightMap, uv ).rgb;
+    
+    gradH.xy = ( gradH.xy * 2.0 - 1.0 ) * bumpness;
+    
+    float dhdx = ApplyChainRule( gradH.x, gradH.y, duvdx.x, duvdx.y );
+    float dhdy = ApplyChainRule( gradH.x, gradH.y, duvdy.x, duvdy.y );
+    
+    wsNormal = PerturbNormal( wsNormal, dpdx, dpdy, dhdx, dhdy );
+    
     if ( debug > 0.0 )
     {
-        gl_FragColor = debugVal;
+        gl_FragColor = vec4( wsNormal * 0.5 + 0.5, 1.0 );
+        gl_FragColor = texture2D( heightMap, v_txc * tile );
     }
     else
     {
-        gradH = texture2D( heightMap, uv ).rgb;
-        
-        gradH.xy = ( gradH.xy * 2.0 - 1.0 ) * bumpness;
-        
-        float dhdx = ApplyChainRule( gradH.x, gradH.y, duvdx.x, duvdx.y );
-        float dhdy = ApplyChainRule( gradH.x, gradH.y, duvdy.x, duvdy.y );
-        
-        wsNormal = PerturbNormal( wsNormal, dpdx, dpdy, dhdx, dhdy );
-        
         vec3 diff = vec3( 0.0 );
         
-        diff += Lighting( normalize( vec3( 1.0, 1.0, 1.0 ) ), vec3( 1.0, 0.702, 0.351 ) * 0.75, wsNormal, wsViewDir );
-        diff += Lighting( normalize( vec3(-1.0,-1.0, 1.0 ) ), vec3( 0.702, 0.702, 1.0 ) * 0.75, wsNormal, wsViewDir );
+        diff += Lighting( normalize( vec3( 1.0, 1.0, 1.0 ) ), vec3( 1.0, 0.702, 0.351 ) * 0.75, wsNormal, wsViewDir, ao );
+        diff += Lighting( normalize( vec3(-1.0,-1.0, 1.0 ) ), vec3( 0.702, 0.702, 1.0 ) * 0.75, wsNormal, wsViewDir, ao );
         
-        diff *= ao;
         gl_FragColor = vec4( diff, 1.0 );
     }
 }
