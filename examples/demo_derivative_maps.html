@@ -6,7 +6,7 @@
 </head>
 <body>
     <div class="exp3.info">
-    Derivative (with Parallax) Maps based on <a class="exp3.link" href="http://www.rorydriscoll.com/2012/01/11/derivative-maps/">rory's</a> blog post.
+    Derivative Parallax Occlusion Maps based on <a class="exp3.link" href="http://www.rorydriscoll.com/2012/01/11/derivative-maps/">rory's</a> blog post.
 <pre>
 Controls:
 - Rotate : Mouse Left Button
@@ -21,38 +21,46 @@ Controls:
     <script src="./js/OBJLoader.js"></script>
     <script>
 
+var config;
 var meshes = [];
 var material;
-var config;
 var textures = [];
 
 function Config()
 {
     var thiz = this;
     this.tile = 2.0;
-    this.bumpness = 32.0;
-    this.parallaxHeight = 16.0;
-    this.occlusion = 0.75;
+    this.bumpness = 4.0;
+    this.parallaxHeight = 4.0;
+    this.occlusion = 0.5;
     this.parallax = true;
-    this.silhouette = true;
+    this.silhouette = false;
     this.specular = true;
     this.debug = false;
     this.texture = 0;
     this.mesh = 0;
     
-    this.shaderBumpness = function()
-    {
-        return ( this.bumpness / 64.0 ) * textures[this.texture].image.width;
-    }
+    this.texPaths = [ "./assets/brick_grad.png", "./assets/pyramids_grad.png", "./assets/stones_grad.png" ];
+    this.geoPaths = [ "./assets/box.obj", "./assets/cylinder.obj", "./assets/torus.obj" ];
+    //this.texNames = a_to_m( ["brick", "pyramids", "stones"] );
+    //this.geoNames = a_to_m( ["box", "cylinder", "torus"] );
     
-    this.shaderParallaxHeight = function()
-    {
-        return this.parallaxHeight / 8.0;
-    }
+    this.shaderBumpness = function() { return ( this.bumpness / 64.0 ) * textures[this.texture].image.width; };
+    this.shaderParallaxHeight = function() { return this.parallaxHeight / 8.0; };
+    this.shaderParallaxSampleCount = function() { return this.parallaxHeight * 4.0; };
     
-    this.shaderParallaxSampleCount = function()
-    {
-        return this.parallaxHeight * 2.0;
+    function getfilename( x ) { return x.split(/(\\|\/)/g).pop(); }
+    function a_to_m( a, f ) {
+        var m = {};
+        if ( f ) {
+            for ( var i = 0; i < a.length; ++i )
+                m[ f( a[i] ) ] = i;
+        }
+        else {
+            for ( var i = 0; i < a.length; ++i )
+                m[ a[i] ] = i;
+        }
+        return m;
     }
     
     var gui = new dat.GUI();
@@ -60,23 +68,32 @@ function Config()
     var f;
     
     f = gui.addFolder( "Scene" )
-    f.add( this, "mesh", { cube: 0, cylinder: 1, sphere: 2,  } )
+    f.add( this, "mesh", a_to_m( this.geoPaths, getfilename ) )
         .onFinishChange( function( val ) { 
-            for ( var i = 0; i < meshes.length; ++i )
-                meshes[i].visible = ( i == val );
+            for ( var i = 0; i < meshes.length; ++i ) {
+                var vis = ( i == val );
+                meshes[i].traverse( function ( child ) {
+                    if ( child instanceof THREE.Mesh )
+                        child.visible = vis;
+                } );
+            }
         } );
     
     f.open();
     
-    f = gui.addFolder( "Material" );
-    f.add( this, "texture", { brick: 0, pyramids: 1, stones: 2 } )
+    f = gui.addFolder( "Texture" );
+    f.add( this, "texture", a_to_m( this.texPaths, getfilename ) )
         .onFinishChange( function( val ) { 
             material.uniforms.heightMap.value = textures[val];
         } );
     
     f.add( this, "tile", 1.0, 4.0 ).step( 1.0 );
-    f.add( this, "bumpness", 1.0, 64.0 ).step( 0.5 );
-    f.add( this, "parallaxHeight", 1.0, 32.0 ).step( 0.5 );
+    
+    f.open();
+    
+    f = gui.addFolder( "D-POM" );
+    f.add( this, "bumpness", 1.0, 8.0 ).step( 0.5 );
+    f.add( this, "parallaxHeight", 2.0, 8.0 ).step( 1.0 );
     f.add( this, "occlusion", 0.0, 1.0 ).step( 0.125 );
     
     f.add( this, "parallax" )
@@ -90,7 +107,6 @@ function Config()
     
     f.open();
 
-    
 }
 
 function on_init( )
@@ -101,13 +117,12 @@ function on_init( )
     
     this.renderer.context.getExtension( "OES_standard_derivatives" );
     
-    this.defaults.camera.position.set( 0.0, 0.0, 200.0 );
+    this.defaults.camera.position.set( 0.0, 0.0, 20.0 );
     
-    var texpaths = [ "assets/brick_grad.png", "assets/pyramids_grad.png", "assets/stones_grad.png" ];
-    
-    for ( var i = 0; i < texpaths.length; ++i )
+    // load textures
+    for ( var i = 0; i < config.texPaths.length; ++i )
     {
-        var tex = THREE.ImageUtils.loadTexture( texpaths[i] );
+        var tex = THREE.ImageUtils.loadTexture( config.texPaths[i] );
         tex.anisotropy = this.renderer.getMaxAnisotropy();
         tex.minFilter = tex.magFilter = THREE.LinearFilter;
         tex.wrapS = THREE.RepeatWrapping;
@@ -115,6 +130,7 @@ function on_init( )
         textures.push( tex );
     }
     
+    // load shaders and initialize material
     material = new THREE.ShaderMaterial( {
         uniforms : { 
             heightMap: { type: "t", value: textures[0] },
@@ -132,21 +148,34 @@ function on_init( )
         vertexShader   : this.loadText( "./assets/derivativemaps.vs" ),
         fragmentShader : this.loadText( "./assets/derivativemaps.fs" ),
         } );
-
-    var geoms = [
-        new THREE.CubeGeometry( 100, 100, 100 ),
-        new THREE.CylinderGeometry( 50, 50, 100, 32 ),
-        new THREE.SphereGeometry( 50, 32, 32 ),
-        ];
     
-    for ( var i = 0; i < geoms.length; ++i )
+    // load meshes
+    var theScene = this.defaults.scene;
+    
+    for ( var i = 0; i < config.geoPaths.length; ++i )
     {
-        var mesh = new THREE.Mesh( geoms[i], material );
-        this.defaults.scene.add( mesh );
-        mesh.visible = false;
-        meshes.push( mesh );
+        var loader = new THREE.OBJLoader();
+        loader.addEventListener( 'load', function ( event ) {
+
+            var object = event.content;
+
+            object.traverse( function ( child ) {
+
+                if ( child instanceof THREE.Mesh )
+                {
+                    child.material = material;
+                    child.visible = ( meshes.length == 0 );
+                }
+            } );
+            
+            object.rotation.x = 0.524;
+            object.rotation.y = 1.047;
+
+            theScene.add( object );
+            meshes.push( object );
+        });
+        loader.load( config.geoPaths[i] );
     }
-    meshes[0].visible = true;
 }
 
 function on_resize( width, height )
@@ -165,6 +194,8 @@ function on_render( )
     material.uniforms.parallaxSampleCount.value = config.shaderParallaxSampleCount();
     material.uniforms.occlusion.value = config.occlusion;
     
+    this.renderer.setClearColor( this.context.bgcolorObj.getHex(), 1.0 );
+    this.renderer.clear( true, true, true );
     this.renderer.render( this.defaults.scene, this.defaults.camera );
 }
 
@@ -205,7 +236,7 @@ function on_mousemove( event )
     {
         mouseState.onmove( event );
         
-        if ( event.button == 0 )
+        if ( event.button === 0 )
         {
             var rotX = mouseState.rotX + 0.01 * mouseState.deltaY;
             var rotY = mouseState.rotY + 0.01 * mouseState.deltaX;
@@ -220,16 +251,17 @@ function on_mousemove( event )
                 meshes[i].rotation.y = rotY;
             }
         }
-        else if ( event.button == 2 )
+        else if ( event.button === 2 )
         {
             var viewZ =  mouseState.viewZ + 0.5 * mouseState.deltaY;
-            if ( viewZ < 80 ) viewZ = 80;
-            if ( viewZ > 400 ) viewZ = 400;
+            if ( viewZ < 10 ) viewZ = 10;
+            if ( viewZ > 50 ) viewZ = 50;
             this.defaults.camera.position.z = viewZ;
         }
     }
 }
 
+// entry point
 new Exp3( {
     bgcolor : "#202020",
     on_init : on_init, 

@@ -2,12 +2,14 @@ function Exp3( ctx )
 {
     var thiz = this;
     thiz.context = ctx;
+    thiz.context.bgcolor = thiz.context.bgcolor ? thiz.context.bgcolor : "#000000";
+    thiz.context.bgcolorObj = new THREE.Color( thiz.context.bgcolor );
     
     function init()
     {
         // basic css setup
         document.body.style["margin"] = "0px";
-        document.body.style["background-color"] = thiz.context.bgcolor ? thiz.context.bgcolor : "#000000";
+        document.body.style["background-color"] = thiz.context.bgcolor;
         document.body.style["color"] = thiz.context.fgcolor ? thiz.context.fgcolor : "#ffffff";
         document.body.style["overflow"] = "hidden";
         
@@ -45,6 +47,7 @@ function Exp3( ctx )
         // WebGLRenderer
         thiz.renderer = new THREE.WebGLRenderer();
         thiz.renderer.setSize( window.innerWidth, window.innerHeight );
+        
         document.body.appendChild( thiz.renderer.domElement );
         
         // Clock
@@ -180,6 +183,7 @@ Exp3.prototype.loadShaderMaterial = function( params )
     } );
 }
 
+/*
 THREE.Exp3CubeGeometry = function ( width, height, depth, widthSegments, heightSegments, depthSegments ) {
 
     THREE.Geometry.call( this );
@@ -307,5 +311,4 @@ THREE.Exp3CubeGeometry = function ( width, height, depth, widthSegments, heightS
 };
 
 THREE.Exp3CubeGeometry.prototype = Object.create( THREE.Geometry.prototype );
-
-
+*/

@@ -92,7 +92,6 @@ void main()
     vec3 gradH;
     
     float ao = 1.0;
-    vec4 debugVal = vec4( 0.0 );
     
     if ( useParallax > 0.0 )
     {
@@ -100,7 +99,7 @@ void main()
         
         // Compute initial parallax displacement direction:
         vec2 vParallaxDirection = normalize(  vViewTS.xy );
-           
+        
         // The length of this vector determines the furthest amount of displacement:
         float fLength         = length( vViewTS );
         float fParallaxLength = sqrt( fLength * fLength - vViewTS.z * vViewTS.z ) / vViewTS.z; 
@@ -112,8 +111,7 @@ void main()
         // in height maps. This is controlled by an artist-editable parameter:
         vParallaxOffsetTS *= parallaxHeight;
         
-        //int nNumSteps   = 64;
-        int nNumSteps   = int( mix( parallaxSampleCount * 2.0, parallaxSampleCount, clamp( dot( wsViewDir, wsNormal ), 0.0, 1.0 ) ) );
+        int nNumSteps   = int( mix( parallaxSampleCount * 8.0, parallaxSampleCount, clamp( dot( wsViewDir, wsNormal ), 0.0, 1.0 ) ) );
         float fStepSize = 1.0 / float( nNumSteps );
         float fCurrHeight = 0.0;
         float fPrevHeight = 1.0;
@@ -121,7 +119,7 @@ void main()
         vec2   vTexOffsetPerStep = fStepSize * vParallaxOffsetTS;
         vec2   vTexCurrentOffset = uv;
         float  fCurrentBound     = 1.0;
-        float  fParallaxAmount   = 0.0;
+        float  parallaxAmount    = 0.0;
         
         vec2 pt1;
         vec2 pt2;
@@ -149,48 +147,34 @@ void main()
             fPrevHeight = fCurrHeight;
         }
         
-        float fDelta2 = pt2.x - pt2.y;
-        float fDelta1 = pt1.x - pt1.y;
+        // compute the parallaxAmount using line intersection
+        float delta2 = pt2.x - pt2.y;
+        float delta1 = pt1.x - pt1.y;
 
-        float fDenominator = fDelta2 - fDelta1;
+        float denominator = delta2 - delta1;
 
-        // SM 3.0 requires a check for divide by zero, since that operation will generate
-        // an 'Inf' number instead of 0, as previous models (conveniently) did:
-        if ( fDenominator == 0.0 )
-        {
-            fParallaxAmount = 0.0;
-        }
+        if ( denominator == 0.0 )
+            parallaxAmount = 0.0;
         else
-        {
-            fParallaxAmount = (pt1.x * fDelta2 - pt2.x * fDelta1 ) / fDenominator;
-        }
+            parallaxAmount = ( pt1.x * delta2 - pt2.x * delta1 ) / denominator;
         
-        vec2 vParallaxOffset = vParallaxOffsetTS * ( 1.0 - fParallaxAmount );
-
-        // The computed texture offset for the displaced point on the pseudo-extruded surface:
-        uv = uv - vParallaxOffset;
+        uv = uv - vParallaxOffsetTS * ( 1.0 - parallaxAmount );
         
         if ( useSilhouette > 0.0 )
         {
             float clipMax = tile;
             float clipMin = 0.0;
             
-            
             if ( uv.x >= clipMax || uv.y >= clipMax
               || uv.x <= clipMin || uv.y <= clipMin )
             {
                 discard;
             }
-            
-            /*uv = clamp( uv, clipMin, clipMax );*/
         }
         
-        ao = mix( 1.0, max( 0.0, fCurrentBound ), occlusion );
-        
-        debugVal = vec4( ao );
-        
-        //debugVal = vec4( length( vParallaxOffset ) > clipLimit ? 1.0 : 0.0 );
-        //debugVal = vec4( clipLimit );
+        ao = 1.0 - occlusion;
+        ao = 1.0 - ao * ao;
+        ao = mix( 1.0, max( 0.0, fCurrentBound ), ao );
     }
     
     gradH = texture2D( heightMap, uv ).rgb;
@@ -205,7 +189,7 @@ void main()
     if ( debug > 0.0 )
     {
         gl_FragColor = vec4( wsNormal * 0.5 + 0.5, 1.0 );
-        gl_FragColor = texture2D( heightMap, v_txc * tile );
+        //gl_FragColor = texture2D( heightMap, v_txc * tile );
     }
     else
     {
