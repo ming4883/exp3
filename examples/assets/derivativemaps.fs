@@ -5,6 +5,7 @@
 varying vec2 v_txc;
 varying vec3 v_nrm;
 varying vec3 v_pos;
+
 uniform sampler2D heightMap;
 uniform float tile;
 uniform float bumpness;
@@ -17,6 +18,11 @@ uniform float useSpecular;
 uniform float debug;
 uniform vec3 camPos;
 
+float ApplyChainRule( float dhdu, float dhdv, float dud_, float dvd_ )
+{
+    return dhdu * dud_ + dhdv * dvd_;
+}
+
 vec3 SurfaceGradient( vec3 n, vec3 dpdx, vec3 dpdy, float dhdx, float dhdy )
 {
     vec3 r1 = cross( dpdy, n );
@@ -26,7 +32,7 @@ vec3 SurfaceGradient( vec3 n, vec3 dpdx, vec3 dpdy, float dhdx, float dhdy )
     return ( r1 * dhdx + r2 * dhdy ) / det;
 }
 
-vec3 ParallaxOffset( vec3 v, vec3 n, vec3 dpdx, vec3 dpdy, vec2 duvdx, vec2 duvdy )
+vec3 ParallaxDirection( vec3 v, vec3 n, vec3 dpdx, vec3 dpdy, vec2 duvdx, vec2 duvdy )
 {
     vec3 r1 = cross( dpdy, n );
     vec3 r2 = cross( n, dpdx );
@@ -39,16 +45,6 @@ vec3 ParallaxOffset( vec3 v, vec3 n, vec3 dpdx, vec3 dpdy, vec2 duvdx, vec2 duvd
     vtex.xy = duvdx * vscr.x + duvdy * vscr.y;
     
     return vtex;
-}
-
-vec3 PerturbNormal( vec3 n, vec3 dpdx, vec3 dpdy, float dhdx, float dhdy )
-{
-    return normalize( n - SurfaceGradient( n, dpdx, dpdy, dhdx, dhdy ) );
-}
-
-float ApplyChainRule( float dhdu, float dhdv, float dud_, float dvd_ )
-{
-    return dhdu * dud_ + dhdv * dvd_;
 }
 
 vec3 Lighting( vec3 lightDir, vec3 lightColor, vec3 wsNormal, vec3 wsViewDir, float ao )
@@ -72,11 +68,6 @@ vec3 Lighting( vec3 lightDir, vec3 lightColor, vec3 wsNormal, vec3 wsViewDir, fl
     return lightColor * ndotl;
 }
 
-float Displacement( float h, float s, float b )
-{
-    return h * s + b;
-}
-
 void main()
 {
     vec3 wsViewDir = normalize( camPos - v_pos );
@@ -89,76 +80,68 @@ void main()
     vec2 duvdx = dFdx( uv );
     vec2 duvdy = dFdy( uv );
     
-    vec3 gradH;
-    
     float ao = 1.0;
     
     if ( useParallax > 0.0 )
     {
-        vec3 vViewTS = ParallaxOffset( wsViewDir, wsNormal, dpdx, dpdy, duvdx, duvdy );
-        
-        // Compute initial parallax displacement direction:
-        vec2 vParallaxDirection = normalize(  vViewTS.xy );
+        vec3 tsPDir = ParallaxDirection( wsViewDir, wsNormal, dpdx, dpdy, duvdx, duvdy );
         
         // The length of this vector determines the furthest amount of displacement:
-        float fLength         = length( vViewTS );
-        float fParallaxLength = sqrt( fLength * fLength - vViewTS.z * vViewTS.z ) / vViewTS.z; 
-           
-        // Compute the actual reverse parallax displacement vector:
-        vec2 vParallaxOffsetTS = vParallaxDirection * fParallaxLength;
-           
-        // Need to scale the amount of displacement to account for different height ranges
-        // in height maps. This is controlled by an artist-editable parameter:
-        vParallaxOffsetTS *= parallaxHeight;
+        float fLength = length( tsPDir );
+        fLength = sqrt( fLength * fLength - tsPDir.z * tsPDir.z ) / tsPDir.z; 
         
-        int nNumSteps   = int( mix( parallaxSampleCount * 8.0, parallaxSampleCount, clamp( dot( wsViewDir, wsNormal ), 0.0, 1.0 ) ) );
-        float fStepSize = 1.0 / float( nNumSteps );
-        float fCurrHeight = 0.0;
-        float fPrevHeight = 1.0;
+        // Compute the maximum reverse parallax displacement vector:
+        vec2 maxParallaxOffset = normalize( tsPDir.xy ) * fLength;
         
-        vec2   vTexOffsetPerStep = fStepSize * vParallaxOffsetTS;
-        vec2   vTexCurrentOffset = uv;
-        float  fCurrentBound     = 1.0;
-        float  parallaxAmount    = 0.0;
+        // Scale the maximum amount of displacement by the artist-editable parameter: parallaxHeight
+        maxParallaxOffset *= parallaxHeight;
+        
+        int numSteps = int( mix( parallaxSampleCount * 8.0, parallaxSampleCount, clamp( dot( wsViewDir, wsNormal ), 0.0, 1.0 ) ) );
+        float stepSize = 1.0 / float( numSteps );
+        float currHeight = 0.0;
+        float prevHeight = 1.0;
+        float currBound  = 1.0;
+        
+        vec2 offsetPerStep = stepSize * maxParallaxOffset;
+        vec2 currOffset = uv;
         
         vec2 pt1;
         vec2 pt2;
         
         for ( int it = 0; it < 512; ++it )
         {
-            if ( it >= nNumSteps )
+            if ( it >= numSteps )
                 break;
 
-            vTexCurrentOffset -= vTexOffsetPerStep;
+            currOffset -= offsetPerStep;
             
-            gradH = texture2D( heightMap, vTexCurrentOffset ).rgb;
-            fCurrHeight = gradH.b;
+            currHeight = texture2D( heightMap, currOffset ).b;
             
-            fCurrentBound -= fStepSize;
+            currBound -= stepSize;
             
-            if ( fCurrHeight > fCurrentBound ) 
+            if ( currHeight > currBound ) 
             {
-                pt1 = vec2( fCurrentBound, fCurrHeight );
-                pt2 = vec2( fCurrentBound + fStepSize, fPrevHeight );
+                pt1 = vec2( currBound, currHeight );
+                pt2 = vec2( currBound + stepSize, prevHeight );
 
                 break;
             }
             
-            fPrevHeight = fCurrHeight;
+            prevHeight = currHeight;
         }
         
         // compute the parallaxAmount using line intersection
+        float parallaxAmount = 0.0;
+        
         float delta2 = pt2.x - pt2.y;
         float delta1 = pt1.x - pt1.y;
 
         float denominator = delta2 - delta1;
 
-        if ( denominator == 0.0 )
-            parallaxAmount = 0.0;
-        else
+        if ( denominator != 0.0 )
             parallaxAmount = ( pt1.x * delta2 - pt2.x * delta1 ) / denominator;
         
-        uv = uv - vParallaxOffsetTS * ( 1.0 - parallaxAmount );
+        uv = uv - maxParallaxOffset * ( 1.0 - parallaxAmount );
         
         if ( useSilhouette > 0.0 )
         {
@@ -174,17 +157,16 @@ void main()
         
         ao = 1.0 - occlusion;
         ao = 1.0 - ao * ao;
-        ao = mix( 1.0, max( 0.0, fCurrentBound ), ao );
+        ao = mix( 1.0, max( 0.0, currBound ), ao );
     }
     
-    gradH = texture2D( heightMap, uv ).rgb;
+    vec2 dhduv = texture2D( heightMap, uv ).rg;
+    dhduv = ( dhduv * 2.0 - 1.0 ) * bumpness;
     
-    gradH.xy = ( gradH.xy * 2.0 - 1.0 ) * bumpness;
+    float dhdx = ApplyChainRule( dhduv.x, dhduv.y, duvdx.x, duvdx.y );
+    float dhdy = ApplyChainRule( dhduv.x, dhduv.y, duvdy.x, duvdy.y );
     
-    float dhdx = ApplyChainRule( gradH.x, gradH.y, duvdx.x, duvdx.y );
-    float dhdy = ApplyChainRule( gradH.x, gradH.y, duvdy.x, duvdy.y );
-    
-    wsNormal = PerturbNormal( wsNormal, dpdx, dpdy, dhdx, dhdy );
+    wsNormal = normalize( wsNormal - SurfaceGradient( wsNormal, dpdx, dpdy, dhdx, dhdy ) );
     
     if ( debug > 0.0 )
     {
