@@ -151,6 +151,40 @@ function Exp3( ctx )
 
 Exp3.prototype._shaderId = 0;
 
+Exp3.prototype.createSceneAndCamera = function()
+{
+    var ret = {};
+    ret.camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 1000 );
+        
+    ret.scene = new THREE.Scene();
+    
+    return ret;
+}
+
+Exp3.prototype.createScreenQuad = function()
+{
+    var geom = new THREE.Geometry();
+    geom.vertices.push( new THREE.Vector3( -1, 1, 0 ) );
+    geom.vertices.push( new THREE.Vector3( -1,-1, 0 ) );
+    geom.vertices.push( new THREE.Vector3(  1, 1, 0 ) );
+    geom.vertices.push( new THREE.Vector3(  1,-1, 0 ) );
+    
+    var uv = [
+        new THREE.Vector2( 0, 1 ),
+        new THREE.Vector2( 0, 0 ),
+        new THREE.Vector2( 1, 1 ),
+        new THREE.Vector2( 1, 0 ),
+        ];
+    
+    geom.faceVertexUvs[0].push( [ uv[0].clone(), uv[1].clone(), uv[2].clone() ] );
+    geom.faceVertexUvs[0].push( [ uv[3].clone(), uv[2].clone(), uv[1].clone() ] );
+    
+    geom.faces.push( new THREE.Face3( 0, 1, 2 ) );
+    geom.faces.push( new THREE.Face3( 3, 2, 1 ) );
+    
+    return geom;
+}
+
 Exp3.prototype.loadText = function( url )
 {
     var request = new XMLHttpRequest();

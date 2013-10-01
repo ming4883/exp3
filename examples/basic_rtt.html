@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>exp3 - basic_rtt</title>
+    <meta charset="utf-8">
+</head>
+<body>
+
+    <script src="./js/three.min.js"></script>
+    <script src="./js/exp3.js"></script>
+    <script>
+
+function on_init( )
+{
+    var geometry = new THREE.CubeGeometry( 200, 200, 200 );
+    var material;
+    
+    // setup render to texture
+    material = new THREE.ShaderMaterial( {
+        uniforms : { fixedColor: { type: "v4", value: new THREE.Vector4( 0.5, 0.75, 1.0, 1.0 ) } },
+        vertexShader : this.loadText( "./assets/unlit.vs" ),
+        fragmentShader : this.loadText( "./assets/unlit.fixedcolor.fs" ),
+        } );
+
+    this.defaults.scene.add( this.defaults.mesh = new THREE.Mesh( geometry, material ) );
+    
+    this.defaults.camera.position.z = 400;
+    this.defaults.camera.aspect = 1.0;
+    this.defaults.camera.updateProjectionMatrix();
+    
+    // setup render to screen
+    this.rtTexture = new THREE.WebGLRenderTarget( 512, 512, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, format: THREE.RGBFormat } );
+    
+    material = new THREE.ShaderMaterial( {
+        uniforms : { baseMap: { type: "t", value: this.rtTexture } },
+        vertexShader : this.loadText( "./assets/unlit.vs" ),
+        fragmentShader : this.loadText( "./assets/unlit.basemap.fs" ),
+        } );
+    this.screens = this.createSceneAndCamera();
+    this.screens.scene.add( new THREE.Mesh( geometry, material ) );
+    
+    this.screens.camera.position.z = 300;
+}
+
+function on_resize( width, height )
+{
+    this.screens.camera.aspect = width / height;
+    this.screens.camera.updateProjectionMatrix();
+}
+
+function on_render( )
+{
+    this.defaults.mesh.rotation.x += 0.0025;
+    this.defaults.mesh.rotation.y += 0.005;
+
+    this.renderer.render( this.defaults.scene, this.defaults.camera, this.rtTexture, true );
+    this.renderer.render( this.screens.scene, this.screens.camera );
+}
+
+new Exp3( {
+    bgcolor : "#202020",
+    on_init : on_init, 
+    on_resize : on_resize, 
+    on_render : on_render 
+    } );
+
+    </script>
+
+</body>
+</html>
