@@ -151,12 +151,14 @@ function Exp3( ctx )
 
 Exp3.prototype._shaderId = 0;
 
-Exp3.prototype.createSceneAndCamera = function()
+Exp3.prototype.createEffectComposer = function()
 {
     var ret = {};
     ret.camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 1000 );
         
     ret.scene = new THREE.Scene();
+    
+    ret.quadGeom = this.createScreenQuad();
     
     return ret;
 }

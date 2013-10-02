@@ -33,19 +33,17 @@ function on_init( )
     
     material = new THREE.ShaderMaterial( {
         uniforms : { baseMap: { type: "t", value: this.rtTexture } },
-        vertexShader : this.loadText( "./assets/unlit.vs" ),
-        fragmentShader : this.loadText( "./assets/unlit.basemap.fs" ),
+        vertexShader : this.loadText( "./assets/composer.vs" ),
+        fragmentShader : this.loadText( "./assets/composer.invert.fs" ),
         } );
-    this.screens = this.createSceneAndCamera();
-    this.screens.scene.add( new THREE.Mesh( geometry, material ) );
-    
-    this.screens.camera.position.z = 300;
+    this.composer = this.createEffectComposer();
+    this.composer.scene.add( new THREE.Mesh( this.composer.quadGeom, material ) );
 }
 
 function on_resize( width, height )
 {
-    this.screens.camera.aspect = width / height;
-    this.screens.camera.updateProjectionMatrix();
+    this.composer.camera.aspect = width / height;
+    this.composer.camera.updateProjectionMatrix();
 }
 
 function on_render( )
@@ -54,7 +52,7 @@ function on_render( )
     this.defaults.mesh.rotation.y += 0.005;
 
     this.renderer.render( this.defaults.scene, this.defaults.camera, this.rtTexture, true );
-    this.renderer.render( this.screens.scene, this.screens.camera );
+    this.renderer.render( this.composer.scene, this.composer.camera );
 }
 
 new Exp3( {
