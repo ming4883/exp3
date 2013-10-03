@@ -151,14 +151,40 @@ function Exp3( ctx )
 
 Exp3.prototype._shaderId = 0;
 
-Exp3.prototype.createEffectComposer = function()
+Exp3.prototype.createPFxShaderPass = function( material )
+{
+    var ret = {};
+    ret.material = material;
+    
+    ret.render = function( composer )
+    {
+        composer.quad.material = this.material;
+        composer._renderer.render( composer.scene, composer.camera );
+    }
+    
+    return ret;
+}
+
+Exp3.prototype.createPFxComposer = function()
 {
     var ret = {};
     ret.camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 1000 );
         
-    ret.scene = new THREE.Scene();
+    ret._renderer = this.renderer;
     
     ret.quadGeom = this.createScreenQuad();
+    ret.quad = new THREE.Mesh( ret.quadGeom, null );
+    
+    ret.scene = new THREE.Scene();
+    ret.scene.add( ret.quad );
+    
+    ret.passes = [];
+    
+    ret.render = function()
+    {
+        for ( var p = 0; p < this.passes.length; ++p )
+            this.passes[p].render( this );
+    };
     
     return ret;
 }

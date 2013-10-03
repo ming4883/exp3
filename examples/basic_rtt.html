@@ -36,8 +36,8 @@ function on_init( )
         vertexShader : this.loadText( "./assets/composer.vs" ),
         fragmentShader : this.loadText( "./assets/composer.invert.fs" ),
         } );
-    this.composer = this.createEffectComposer();
-    this.composer.scene.add( new THREE.Mesh( this.composer.quadGeom, material ) );
+    this.composer = this.createPFxComposer();
+    this.composer.passes.push( this.createPFxShaderPass( material ) );
 }
 
 function on_resize( width, height )
@@ -52,7 +52,8 @@ function on_render( )
     this.defaults.mesh.rotation.y += 0.005;
 
     this.renderer.render( this.defaults.scene, this.defaults.camera, this.rtTexture, true );
-    this.renderer.render( this.composer.scene, this.composer.camera );
+    
+    this.composer.render();
 }
 
 new Exp3( {
