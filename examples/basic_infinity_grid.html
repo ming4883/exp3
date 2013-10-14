@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>exp3 - basic_infinity_grid</title>
+    <meta charset="utf-8">
+</head>
+<body>
+
+    <script src="./js/three.min.js"></script>
+    <script src="./js/exp3.js"></script>
+    <script src="./js/Event.min.js"></script>
+    <script>
+
+function create_grid_geom( )
+{
+    var geom = new THREE.Geometry();
+    geom.vertices.push( new THREE.Vector3( -1, 0,-1 ) );
+    geom.vertices.push( new THREE.Vector3( -1, 0, 1 ) );
+    geom.vertices.push( new THREE.Vector3(  1, 0,-1 ) );
+    geom.vertices.push( new THREE.Vector3(  1, 0, 1 ) );
+    
+    var uv = [
+        new THREE.Vector2( 0, 1 ),
+        new THREE.Vector2( 0, 0 ),
+        new THREE.Vector2( 1, 1 ),
+        new THREE.Vector2( 1, 0 ),
+        ];
+    
+    geom.faceVertexUvs[0].push( [ uv[0].clone(), uv[1].clone(), uv[2].clone() ] );
+    geom.faceVertexUvs[0].push( [ uv[3].clone(), uv[2].clone(), uv[1].clone() ] );
+    
+    geom.faces.push( new THREE.Face3( 0, 1, 2 ) );
+    geom.faces.push( new THREE.Face3( 3, 2, 1 ) );
+    
+    return geom;
+}
+
+function on_drag( event, self, context )
+{
+    //console.log( self.gesture, self.fingers, self.state, self.start, self.x, self.y, self.bbox );
+    if ( self.state == "down" )
+    {
+        this.tempCamPos = this.defaults.camera.position.clone();
+    }
+    
+    if ( self.state == "move" )
+    {
+        this.defaults.camera.position.z = this.tempCamPos.z - ( self.y - self.start.y ) / 64.0;
+    }
+    
+}
+
+function on_init( )
+{
+    this.objects = {};
+    
+    this.defaults.camera.rotation.x = -0.02;
+    this.defaults.camera.position.y = 2;
+    this.defaults.camera.position.z = 4;
+    
+    this.objects.material = new THREE.ShaderMaterial( {
+        uniforms : { uCameraPos: { type: "v3", value: this.defaults.camera.position } },
+        vertexShader : this.loadText( "./assets/grid.vs" ),
+        fragmentShader : this.loadText( "./assets/grid.fs" ),
+        } );
+
+    
+    this.objects.mesh = new THREE.Mesh( create_grid_geom(), this.objects.material );
+    this.objects.mesh.frustumCulled = false;
+    this.defaults.scene.add( this.objects.mesh );
+    
+    // setup input
+    thiz = this;
+    Event.add( this.renderer.domElement, "drag", function ( event, self )
+    {
+        on_drag.call( thiz, event, self );
+    } );
+}
+
+function on_resize( width, height )
+{
+    this.defaults.camera.aspect = width / height;
+    this.defaults.camera.updateProjectionMatrix();
+}
+
+function on_render( )
+{
+    //this.objects.mesh.rotation.x += 0.0025;
+    //this.objects.mesh.rotation.y += 0.005;
+    this.objects.material.uniforms.uCameraPos.value = this.defaults.camera.position;
+
+    this.renderer.render( this.defaults.scene, this.defaults.camera );
+}
+
+new Exp3( {
+    bgcolor : "#202020",
+    on_init : on_init, 
+    on_resize : on_resize, 
+    on_render : on_render 
+    } );
+
+    </script>
+
+</body>
+</html>
