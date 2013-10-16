@@ -11,6 +11,6 @@ void main()
         distToGridLine.z = 1.0 - distToGridLine.z;
     
     float f = max( distToGridLine.x, distToGridLine.z );
-    f = smoothstep( 0.90, 0.98, f );
+    f = smoothstep( 0.90, 0.95, f );
     gl_FragColor = vec4( f, f, f, 1.0 );
 }

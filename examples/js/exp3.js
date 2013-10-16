@@ -165,6 +165,20 @@ Exp3.prototype.createPFxShaderPass = function( material )
     return ret;
 }
 
+Exp3.prototype.createPFxRenderPass = function( scene, camera )
+{
+    var ret = {};
+    ret.scene = scene;
+    ret.camera = camera;
+    
+    ret.render = function( composer )
+    {
+        composer._renderer.render( this.scene, this.camera );
+    }
+    
+    return ret;
+}
+
 Exp3.prototype.createPFxComposer = function()
 {
     var ret = {};

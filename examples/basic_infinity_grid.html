@@ -41,11 +41,14 @@ function on_drag( event, self, context )
     if ( self.state == "down" )
     {
         this.tempCamPos = this.defaults.camera.position.clone();
+        this.tempCamYaw = this.defaults.camera.rotation.y;
     }
     
     if ( self.state == "move" )
     {
         this.defaults.camera.position.z = this.tempCamPos.z - ( self.y - self.start.y ) / 64.0;
+        
+        this.defaults.camera.rotation.y = this.tempCamYaw + ( self.x - self.start.x ) / 512.0;
     }
     
 }
@@ -59,7 +62,10 @@ function on_init( )
     this.defaults.camera.position.z = 4;
     
     this.objects.material = new THREE.ShaderMaterial( {
-        uniforms : { uCameraPos: { type: "v3", value: this.defaults.camera.position } },
+        uniforms : {
+            uCameraPos: { type: "v3", value: this.defaults.camera.position } ,
+            uCameraMatInv: { type: "m4", value: this.defaults.camera.matrixWorld } ,
+        },
         vertexShader : this.loadText( "./assets/grid.vs" ),
         fragmentShader : this.loadText( "./assets/grid.fs" ),
         } );
@@ -88,6 +94,7 @@ function on_render( )
     //this.objects.mesh.rotation.x += 0.0025;
     //this.objects.mesh.rotation.y += 0.005;
     this.objects.material.uniforms.uCameraPos.value = this.defaults.camera.position;
+    this.objects.material.uniforms.uCameraMatInv.value = this.defaults.camera.matrixWorld;
 
     this.renderer.render( this.defaults.scene, this.defaults.camera );
 }
