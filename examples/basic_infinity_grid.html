@@ -46,7 +46,15 @@ function on_drag( event, self, context )
     
     if ( self.state == "move" )
     {
-        this.defaults.camera.position.z = this.tempCamPos.z - ( self.y - self.start.y ) / 64.0;
+        var mvDir = new THREE.Vector3( 0, 0, -1 );
+        mvDir.transformDirection( this.defaults.camera.matrixWorld );
+        mvDir.y = 0;
+        mvDir.setLength( ( self.y - self.start.y ) / 128.0 );
+        mvDir.add( this.tempCamPos );
+        
+        this.defaults.camera.position = mvDir;
+        
+        //this.defaults.camera.position.z = this.tempCamPos.z - ( self.y - self.start.y ) / 128.0;
         
         this.defaults.camera.rotation.y = this.tempCamYaw + ( self.x - self.start.x ) / 512.0;
     }
@@ -69,7 +77,12 @@ function on_init( )
         vertexShader : this.loadText( "./assets/grid.vs" ),
         fragmentShader : this.loadText( "./assets/grid.fs" ),
         } );
-
+    this.objects.material.transparent = true;
+    
+    this.objects.material.blending = THREE.CustomBlending;
+    this.objects.material.blendSrc = THREE.OneFactor;
+    this.objects.material.blendDst = THREE.OneFactor;
+    this.objects.material.blendEquation = THREE.AddEquation;
     
     this.objects.mesh = new THREE.Mesh( create_grid_geom(), this.objects.material );
     this.objects.mesh.frustumCulled = false;

@@ -1,6 +1,7 @@
 uniform mat4 uCameraMatInv;
 
 varying vec3 vWorldPos;
+varying vec4 vNDCPos;
 
 #define VIEW_OFFSET vec3( 0.0, 0.0, -1.0 )
 #define VIEW_SCALE vec3( 20.0, 0.0, 10.0 )
@@ -12,5 +13,6 @@ void main()
     vWorldPos.y = 0.0;
     
     vec4 mvPosition = modelViewMatrix * vec4( vWorldPos, 1.0 );
-    gl_Position = projectionMatrix * mvPosition;
+    vNDCPos = projectionMatrix * mvPosition;
+    gl_Position = vNDCPos;
 }

@@ -45,8 +45,9 @@ function Exp3( ctx )
         //document.body.onselectstart = function() { return false; }
         
         // WebGLRenderer
-        thiz.renderer = new THREE.WebGLRenderer();
+        thiz.renderer = new THREE.WebGLRenderer( { alpha : false } );
         thiz.renderer.setSize( window.innerWidth, window.innerHeight );
+        thiz.renderer.setClearColor( thiz.context.bgcolorObj.getHex(), 1.0 );
         
         document.body.appendChild( thiz.renderer.domElement );
         
