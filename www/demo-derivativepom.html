@@ -7,7 +7,7 @@
 	</head>
 	<body>
 		<div id="rootDiv"><canvas id="renderCanvas"></canvas></div>
-		<script src="js/babylon.1.11.js"></script>
+		<script src="js/babylon.1.12.js"></script>
 		<script src="js/hand-1.3.8.js"></script>
 		<script type="text/javascript">
 
@@ -37,7 +37,7 @@ function run()
 	var sphere = BABYLON.Mesh.CreateSphere ("Sphere", 10, 1.0, scene);
 	sphere.material = mtl;
 	
-	//var tex = BABYLON.Texture ("img/brick_grad.png", scene);
+	var tex = new BABYLON.Texture ("img/brick_grad.png", scene);
 	//tex.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
 	//tex.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
 	
@@ -47,7 +47,7 @@ function run()
 	// Once the scene is loaded, just register a render loop to render it
 	engine.runRenderLoop (function () {
 	
-		//mtl.setTexture ("heightMap", tex);
+		mtl.setTexture ("heightMap", tex);
 		mtl.setFloat ("tile", 1.0);
 		mtl.setVector3 ("camPos", camera.position);
 		
