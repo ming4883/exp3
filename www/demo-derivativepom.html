@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-		<title>hello-shader</title>
+		<title>derivative-pom</title>
 		<link rel="stylesheet" href="css/common.css">
 	</head>
 	<body>
@@ -33,8 +33,8 @@ function run()
 	};
 
 	// Creating a camera looking to the zero point (0,0,0), a light, and a sphere of size 1
-	var camera = new BABYLON.ArcRotateCamera ("Camera", 1, 0.8, 10, new BABYLON.Vector3 (0, 0, 0), scene);
-	var sphere = BABYLON.Mesh.CreateSphere ("Sphere", 10, 1.0, scene);
+	var camera = new BABYLON.ArcRotateCamera ("Camera", 1, 0.8, 20, new BABYLON.Vector3 (0, 0, 0), scene);
+	var sphere = BABYLON.Mesh.CreateBox ("Sphere", 5.0, scene);
 	sphere.material = mtl;
 	
 	var tex = new BABYLON.Texture ("img/brick_grad.png", scene);
@@ -48,12 +48,18 @@ function run()
 	engine.runRenderLoop (function () {
 	
 		mtl.setTexture ("heightMap", tex);
-		mtl.setFloat ("tile", 1.0);
+		mtl.setFloat ("tile", 2.0);
+		mtl.setFloat ("bumpness", 1.0);
+		mtl.setFloat ("useParallax", 1.0);
+		mtl.setFloat ("parallaxHeight", 0.5);
+		mtl.setFloat ("parallaxSampleCount", 8.0);
+		mtl.setFloat ("useSpecular", 1.0);
+		mtl.setFloat ("occlusion", 0.5);
+		mtl.setFloat ("debug", 0.0);
+		
 		mtl.setVector3 ("camPos", camera.position);
 		
 		/*
-		uniform float bumpness;
-		uniform float parallaxHeight;
 		uniform float parallaxSampleCount;
 		uniform float occlusion;
 		uniform float useParallax;
